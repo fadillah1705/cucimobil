@@ -3,6 +3,11 @@ ob_start();
 session_start();
 include 'conn.php';
 
+if (!isset($_SESSION['user_id'])) 
+    // Belum login, redirect ke halaman login
+    header("Location: login.php");
+    exit;
+
 $nama = $_POST['nama'];
 $username =$_POST['username'];
 $url = "https://wa.me/6281353638858?text=Halo%2C%20saya%20ingin%20booking%20cuci%20interior.%20Apakah%20masih%20tersedia%3F";
