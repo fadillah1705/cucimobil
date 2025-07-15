@@ -62,6 +62,20 @@ if (!isset($_SESSION['username'])) {
             <span class="badge fw-bold text-white p-3 mb-3" style="background-color: #3a9fa7;">Harga Layanan</span>
           </h3>
     <div class="row justify-content-center g-4 mb-4">
+      <div class="col-md-4 col-lg-3">
+        <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">
+          <div class="card-body">
+            <h5 class="card-title fw-bold">Cuci Interior</h5>
+            <p class="mb-1">Pembersihan dashboard, jok, dan karpet</p>
+            <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
+            <p class="text-muted mt-3">Harga sekali cuci</p>
+            <h5 class="fw-bold">Rp30.000</h5>
+            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>     
+</form>
+          </div>
+        </div>
+      </div>
 <div class="col-md-4 col-lg-3">
   <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">
     <div class="card-body">
@@ -70,11 +84,12 @@ if (!isset($_SESSION['username'])) {
       <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
       <p class="text-muted mt-3">Harga sekali cuci</p>
       <h5 class="fw-bold">Rp30.000</h5>
-      <button onclick="window.location.href='https://wa.me/6281353638585?text=Halo%2C%20saya%20ingin%20booking%20cuci%20interior.%20Apakah%20masih%20tersedia%3F'" class="btn btn-primary mt-3">Booking</button>
+    <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>
+</form>
     </div>
   </div>
 </div>
-
 
       <div class="col-md-4 col-lg-3">
         <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">
@@ -84,7 +99,13 @@ if (!isset($_SESSION['username'])) {
             <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
             <p class="text-muted mt-3">Harga sekali cuci</p>
             <h5 class="fw-bold">Rp45.000</h5>
-            <button onclick="window.location.href='https://wa.me/6281353638585?text=Halo%2C%20saya%20ingin%20booking%20cuci%20interior.%20Apakah%20masih%20tersedia%3F'" class="btn btn-primary mt-3">Booking</button>
+
+            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>
+</form>
+
+          
+
           </div>
         </div>
       </div>
@@ -97,7 +118,12 @@ if (!isset($_SESSION['username'])) {
             <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
             <p class="text-muted mt-3">Harga sekali cuci</p>
             <h5 class="fw-bold">Rp65.000</h5>
-            <button onclick="window.location.href='https://wa.me/6281353638585?text=Halo%2C%20saya%20ingin%20booking%20cuci%20interior.%20Apakah%20masih%20tersedia%3F'" class="btn btn-primary mt-3">Booking</button>
+
+            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>
+</form>
+
+
           </div>
         </div>
       </div>
@@ -113,7 +139,11 @@ if (!isset($_SESSION['username'])) {
             <p class="mb-1">Menggunakan Meguiar’s Hyper Wash</p>
             <p class="text-muted mt-3">Harga sekali cuci</p>
             <h5 class="fw-bold">Rp40.000</h5>
-            <button onclick="window.location.href='https://wa.me/6281353638585?text=Halo%2C%20saya%20ingin%20booking%20cuci%20interior.%20Apakah%20masih%20tersedia%3F'" class="btn btn-primary mt-3">Booking</button>
+
+            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>
+</form>
+
           </div>
         </div>
       </div>
@@ -126,7 +156,11 @@ if (!isset($_SESSION['username'])) {
             <p class="mb-1">Menggunakan Meguiar’s Hyper Wash</p>
             <p class="text-muted mt-3">Harga sekali Cuci</p>
             <h5 class="fw-bold">Rp1.500.000</h5>
-            <button onclick="window.location.href='https://wa.me/6281353638585?text=Halo%2C%20saya%20ingin%20booking%20cuci%20interior.%20Apakah%20masih%20tersedia%3F'" class="btn btn-primary mt-3">Booking</button>
+
+            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>
+</form>
+
           </div>
         </div>
       </div>
@@ -139,7 +173,11 @@ if (!isset($_SESSION['username'])) {
             <p class="mb-1">Menggunakan alat & formula profesional</p>
             <p class="text-muted mt-3">Harga sekali layanan</p>
             <h5 class="fw-bold">Rp50.000</h5>
-             <button onclick="window.location.href='https://wa.me/6281353638585?text=Halo%2C%20saya%20ingin%20booking%20cuci%20interior.%20Apakah%20masih%20tersedia%3F'" class="btn btn-primary mt-3">Booking</button>
+
+            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>
+</form>
+
           </div>
         </div>
       </div>
