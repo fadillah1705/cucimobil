@@ -1,37 +1,40 @@
 <?php
-include "db.php";
+include "conn.php"; // ganti dengan file koneksi database-mu
 session_start();
+
+$message = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
   $username = $_POST["username"];
   $password = $_POST["password"];
 
-  $sql = "SELECT * FROM mencuci WHERE username = ?";
+  $sql = "SELECT * FROM users WHERE username = ?";
   $stmt = $conn->prepare($sql);
   $stmt->bind_param("s", $username);
   $stmt->execute();
 
   $result = $stmt->get_result();
-  $user = $result->fetch_assoc();
 
-  if ($user && password_verify($password, $user['password'])) {
-    // Simpan session
-    $_SESSION['username'] = $user['username'];
-    $_SESSION['role'] = $user['role'];
+  if ($result->num_rows === 1) {
+    $user = $result->fetch_assoc();
 
-    // Arahkan ke halaman sesuai role
-    if ($user['role'] == 'admin') {
-      header("Location: admin.php");
-    } else {
-      header("Location: index.php");
-    }
+    if (password_verify($password, $user["password"])) {
+    $_SESSION["username"] = $user["username"];
+    $_SESSION["role"] = $user["role"];
+
+    echo "<script>
+      alert('Login berhasil!');
+      window.location.href = 'index.php';
+    </script>";
     exit();
-  } else {
-    echo "<div class='text-center mt-4 text-danger'>Username atau Password Salah!</div>";
-  }
+} else {
+    $message = "Password salah.";
+}
+
+
 
   $stmt->close();
-}
+}}
 ?>
 
 
@@ -54,17 +57,28 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="alert alert-danger"><?= $error ?></div>
           <?php endif; ?>
 
-          <form method="POST">
-            <div class="mb-3">
-              <label for="username" class="form-label">Username</label>
-              <input type="text" class="form-control" name="username" required>
-            </div>
-            <div class="mb-3">
-              <label for="password" class="form-label">Password</label>
-              <input type="password" class="form-control" name="password" required>
-            </div>
-            <button type="submit" class="btn btn-success w-100">Login</button>
-            <div class="text-center mt-3">
+         <form method="POST">
+  <div class="mb-3">
+    <label class="form-label">Username</label>
+    <input type="text" class="form-control" name="username" required>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Password</label>
+    <input type="password" class="form-control" name="password" required>
+  </div>
+  <button type="submit" class="btn btn-success w-100">Login</button>
+  <br>
+<button type="button" class="btn btn-success w-100" onclick="window.location.href='index.php'">
+  Masuk tanpa akun
+</button>
+
+  <?php if (!empty($message)): ?>
+    <div class="alert alert-danger text-center mt-3">
+      <?= $message ?>
+    </div>
+  <?php endif; ?>
+</form>
+
               Belum punya akun? <a href="regis.php">Daftar</a>
             </div>
           </form>
