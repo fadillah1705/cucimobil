@@ -1,10 +1,10 @@
 <?php
 include 'koneksi.php';
-// memulai sesi PHP.
+// Memulai sesi PHP
 session_start();
 // Ini adalah kondisi pengecekan login dan role:
-// !isset($_SESSION['username']) → artinya: jika user belum login
-// $_SESSION['role'] !== 'admin' → artinya: jika user login tapi bukan admin
+// !isset($_SESSION['username']) → jika user belum login
+// $_SESSION['role'] !== 'admin' → jika user login tapi bukan admin
 if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
   // Pengguna akan dialihkan ke halaman login
   header("Location: login.php");

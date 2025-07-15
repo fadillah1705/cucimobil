@@ -1,3 +1,10 @@
+<?php
+session_start();
+if (!isset($_SESSION['username'])) {
+  header("Location: login.php");
+  exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -7,6 +14,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
 </head>
 <body>
    <nav class="navbar navbar-expand-lg bg-body-tertiary fixed-top shadow-sm">
@@ -16,23 +25,32 @@
       <span class="navbar-toggler-icon"></span>
     </button>
 
-   <div class="collapse navbar-collapse" id="navbarNav">
+      <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav ms-auto">
         <li class="nav-item">
-          <a class="nav-link active" href="index.html">Beranda</a>
+          <a class="nav-link" href="index.php">Beranda</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="layanan.html">Layanan Kami</a>
+          <a class="nav-link" href="layanan.php">Layanan Kami</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link active" href="harga.html">Harga</a>
+          <a class="nav-link" href="harga.php">Harga</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="testimoni.html">Testimoni</a>
+          <a class="nav-link" href="testimoni.php">Testimoni</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="kontak.html">Kontak</a>
+          <a class="nav-link active" href="kontak.php">Kontak</a>
         </li>
+         <li class="nav-item dropdown">
+      <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+     <i class="bi bi-person-circle"></i> Profil </a>
+     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+    <li><a class="dropdown-item" href="profil.php">Lihat Profil</a></li>
+    <li><hr class="dropdown-divider"></li>
+    <li><a class="dropdown-item" href="logout.php">Logout</a></li>
+  </ul>
+</li>
       </ul>
     </div>
   </div>
@@ -44,6 +62,20 @@
             <span class="badge fw-bold text-white p-3 mb-3" style="background-color: #3a9fa7;">Harga Layanan</span>
           </h3>
     <div class="row justify-content-center g-4 mb-4">
+      <div class="col-md-4 col-lg-3">
+        <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">
+          <div class="card-body">
+            <h5 class="card-title fw-bold">Cuci Interior</h5>
+            <p class="mb-1">Pembersihan dashboard, jok, dan karpet</p>
+            <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
+            <p class="text-muted mt-3">Harga sekali cuci</p>
+            <h5 class="fw-bold">Rp30.000</h5>
+            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>     
+</form>
+          </div>
+        </div>
+      </div>
 <div class="col-md-4 col-lg-3">
   <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">
     <div class="card-body">
@@ -52,11 +84,12 @@
       <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
       <p class="text-muted mt-3">Harga sekali cuci</p>
       <h5 class="fw-bold">Rp30.000</h5>
-      <button onclick="window.location.href='https://wa.me/6281353638585?text=Halo%2C%20saya%20ingin%20booking%20cuci%20interior.%20Apakah%20masih%20tersedia%3F'" class="btn btn-primary mt-3">Booking</button>
+    <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>
+</form>
     </div>
   </div>
 </div>
-
 
       <div class="col-md-4 col-lg-3">
         <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">
@@ -66,7 +99,13 @@
             <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
             <p class="text-muted mt-3">Harga sekali cuci</p>
             <h5 class="fw-bold">Rp45.000</h5>
-            <button onclick="window.location.href='https://wa.me/6281353638585?text=Halo%2C%20saya%20ingin%20booking%20cuci%20interior.%20Apakah%20masih%20tersedia%3F'" class="btn btn-primary mt-3">Booking</button>
+
+            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>
+</form>
+
+          
+
           </div>
         </div>
       </div>
@@ -79,7 +118,12 @@
             <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
             <p class="text-muted mt-3">Harga sekali cuci</p>
             <h5 class="fw-bold">Rp65.000</h5>
-            <button onclick="window.location.href='https://wa.me/6281353638585?text=Halo%2C%20saya%20ingin%20booking%20cuci%20interior.%20Apakah%20masih%20tersedia%3F'" class="btn btn-primary mt-3">Booking</button>
+
+            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>
+</form>
+
+
           </div>
         </div>
       </div>
@@ -95,7 +139,11 @@
             <p class="mb-1">Menggunakan Meguiar’s Hyper Wash</p>
             <p class="text-muted mt-3">Harga sekali cuci</p>
             <h5 class="fw-bold">Rp40.000</h5>
-            <button onclick="window.location.href='https://wa.me/6281353638585?text=Halo%2C%20saya%20ingin%20booking%20cuci%20interior.%20Apakah%20masih%20tersedia%3F'" class="btn btn-primary mt-3">Booking</button>
+
+            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>
+</form>
+
           </div>
         </div>
       </div>
@@ -108,7 +156,11 @@
             <p class="mb-1">Menggunakan Meguiar’s Hyper Wash</p>
             <p class="text-muted mt-3">Harga sekali Cuci</p>
             <h5 class="fw-bold">Rp1.500.000</h5>
-            <button onclick="window.location.href='https://wa.me/6281353638585?text=Halo%2C%20saya%20ingin%20booking%20cuci%20interior.%20Apakah%20masih%20tersedia%3F'" class="btn btn-primary mt-3">Booking</button>
+
+            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>
+</form>
+
           </div>
         </div>
       </div>
@@ -121,7 +173,11 @@
             <p class="mb-1">Menggunakan alat & formula profesional</p>
             <p class="text-muted mt-3">Harga sekali layanan</p>
             <h5 class="fw-bold">Rp50.000</h5>
-             <button onclick="window.location.href='https://wa.me/6281353638585?text=Halo%2C%20saya%20ingin%20booking%20cuci%20interior.%20Apakah%20masih%20tersedia%3F'" class="btn btn-primary mt-3">Booking</button>
+
+            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
+  <button type="submit">Booking</button>
+</form>
+
           </div>
         </div>
       </div>

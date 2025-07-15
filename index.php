@@ -1,3 +1,10 @@
+<?php
+session_start();
+if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'user') {
+    header("Location: login.php");
+    exit;
+}
+?>
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -18,22 +25,22 @@
       <span class="navbar-toggler-icon"></span>
     </button>
 
-    <div class="collapse navbar-collapse" id="navbarNav">
+      <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav ms-auto">
         <li class="nav-item">
-          <a class="nav-link active" href="index.html">Beranda</a>
+          <a class="nav-link" href="index.php">Beranda</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="layanan.html">Layanan Kami</a>
+          <a class="nav-link" href="layanan.php">Layanan Kami</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="harga.html">Harga</a>
+          <a class="nav-link" href="harga.php">Harga</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="testimoni.html">Testimoni</a>
+          <a class="nav-link" href="testimoni.php">Testimoni</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="kontak.html">Kontak</a>
+          <a class="nav-link active" href="kontak.php">Kontak</a>
         </li>
 
        <!-- profile -->
@@ -41,7 +48,7 @@
       <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
      <i class="bi bi-person-circle"></i> Profil </a>
      <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">Lihat Profil</a></li>
+    <li><a class="dropdown-item" href="profil.php">Lihat Profil</a></li>
     <li><hr class="dropdown-divider"></li>
     <li><a class="dropdown-item" href="logout.php">Logout</a></li>
   </ul>
