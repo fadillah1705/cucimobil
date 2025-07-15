@@ -3,10 +3,11 @@ ob_start();
 session_start();
 include 'conn.php';
 
-if (!isset($_SESSION['user_id'])) 
+if (!isset($_SESSION['user_id'])) {
     // Belum login, redirect ke halaman login
     header("Location: login.php");
     exit;
+}
 
 $nama = $_POST['nama'];
 $username =$_POST['username'];
@@ -23,6 +24,8 @@ if (!$stmt) {
     die("Prepare gagal: " . $conn->error);
 }
 $stmt->bind_param("ss", $nama, $username);
+$stmt->execute();
+
 
 
 // Redirect ke WhatsApp
