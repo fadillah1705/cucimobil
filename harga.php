@@ -1,9 +1,5 @@
 <?php
 session_start();
-if (!isset($_SESSION['username'])) {
-  header("Location: login.php");
-  exit;
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -70,9 +66,11 @@ if (!isset($_SESSION['username'])) {
             <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
             <p class="text-muted mt-3">Harga sekali cuci</p>
             <h5 class="fw-bold">Rp30.000</h5>
-            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
-  <button type="submit">Booking</button>     
+           <form action="wa.php" method="POST">
+  <input type="hidden" name="nama" value="Cuci Interior">
+  <button type="submit" class="btn btn-primary">Booking</button>
 </form>
+
           </div>
         </div>
       </div>
@@ -84,8 +82,9 @@ if (!isset($_SESSION['username'])) {
       <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
       <p class="text-muted mt-3">Harga sekali cuci</p>
       <h5 class="fw-bold">Rp30.000</h5>
-    <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
-  <button type="submit">Booking</button>
+    <form action="wa.php" method="POST">
+  <input type="hidden" name="nama" value="Cuci Interior">
+  <button type="submit" class="btn btn-primary">Booking</button>
 </form>
     </div>
   </div>
@@ -100,8 +99,9 @@ if (!isset($_SESSION['username'])) {
             <p class="text-muted mt-3">Harga sekali cuci</p>
             <h5 class="fw-bold">Rp45.000</h5>
 
-            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
-  <button type="submit">Booking</button>
+           <form action="wa.php" method="POST">
+  <input type="hidden" name="nama" value="Cuci Mobil Exterior">
+  <button type="submit" class="btn btn-primary">Booking</button>
 </form>
 
           
@@ -119,8 +119,9 @@ if (!isset($_SESSION['username'])) {
             <p class="text-muted mt-3">Harga sekali cuci</p>
             <h5 class="fw-bold">Rp65.000</h5>
 
-            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
-  <button type="submit">Booking</button>
+           <form action="wa.php" method="POST">
+  <input type="hidden" name="nama" value="Detailing">
+  <button type="submit" class="btn btn-primary">Booking</button>
 </form>
 
 
@@ -140,8 +141,9 @@ if (!isset($_SESSION['username'])) {
             <p class="text-muted mt-3">Harga sekali cuci</p>
             <h5 class="fw-bold">Rp40.000</h5>
 
-            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
-  <button type="submit">Booking</button>
+            <form action="wa.php" method="POST">
+  <input type="hidden" name="nama" value="Cuci Biasa">
+  <button type="submit" class="btn btn-primary">Booking</button>
 </form>
 
           </div>
@@ -157,8 +159,9 @@ if (!isset($_SESSION['username'])) {
             <p class="text-muted mt-3">Harga sekali Cuci</p>
             <h5 class="fw-bold">Rp1.500.000</h5>
 
-            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
-  <button type="submit">Booking</button>
+            <form action="wa.php" method="POST">
+  <input type="hidden" name="nama" value="Salon Mobil Kaca">
+  <button type="submit" class="btn btn-primary">Booking</button>
 </form>
 
           </div>
@@ -174,8 +177,9 @@ if (!isset($_SESSION['username'])) {
             <p class="text-muted mt-3">Harga sekali layanan</p>
             <h5 class="fw-bold">Rp50.000</h5>
 
-            <form action="http://localhost/ft-cucimobil/wa.php" method="POST">
-  <button type="submit">Booking</button>
+            <form action="wa.php" method="POST">
+  <input type="hidden" name="nama" value="Perbaikan">
+  <button type="submit" class="btn btn-primary">Booking</button>
 </form>
 
           </div>
