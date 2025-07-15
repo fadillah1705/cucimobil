@@ -1,6 +1,5 @@
 <?php
 include 'koneksi.php';
-<<<<<<< Updated upstream
 session_start();
 if (!isset($_SESSION['admin'])) {
   header("Location: login.php");
@@ -8,11 +7,6 @@ if (!isset($_SESSION['admin'])) {
 }
 ?>
 
-
-=======
-?>
-
->>>>>>> Stashed changes
 <!DOCTYPE html>
 <html lang="id">
 <head>
