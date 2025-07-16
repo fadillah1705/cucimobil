@@ -14,11 +14,17 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Enkripsi password
     $password = password_hash($rawPassword, PASSWORD_DEFAULT);
 
+
     // Cek apakah username sudah ada
     $check = $conn->prepare("SELECT id FROM users WHERE username = ?");
     $check->bind_param("s", $username);
     $check->execute();
     $check->store_result();
+
+  $sql = "INSERT INTO mencuci (username, password) VALUES (?, ? )";
+  $stmt = $conn->prepare($sql);
+  $stmt->bind_param("ss", $username, $password);
+
 
     if ($check->num_rows > 0) {
       $message = "Username sudah digunakan. Silakan pilih yang lain.";

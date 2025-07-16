@@ -3,6 +3,15 @@ include 'conn.php';
 session_start();
 
 if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'Admin') {
+
+include 'koneksi.php';
+// Memulai sesi PHP
+session_start();
+// Ini adalah kondisi pengecekan login dan role:
+// !isset($_SESSION['username']) → jika user belum login
+// $_SESSION['role'] !== 'admin' → jika user login tapi bukan admin
+if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
+  // Pengguna akan dialihkan ke halaman login
   header("Location: login.php");
   exit;
 }
@@ -34,14 +43,22 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'Admin') {
 $result = mysqli_query($conn, "SELECT * FROM activity ORDER BY waktu ASC")
           or die("Query Error: " . mysqli_error($conn));
 
+    // mengambil/melihat semua data dari tabel booking
+    $result = mysqli_query($conn, "SELECT * FROM booking ORDER BY waktu DESC");
+    // menampilkan no urut, dari no 1 jadi nanti seterusnya akan manual 2,3,4,..
     $no = 1;
+    // Memulai perulangan untuk mengambil baris demi baris dari hasil query ke database.
+    // Setiap baris disimpan ke $row, dan bisa diakses dengan nama kolom seperti $row['nama'].
+   // Perulangan akan berhenti otomatis saat data habis.
     while ($row = mysqli_fetch_assoc($result)) {
+      // mengambil data dari database,sesuai yg di isi pengguna di tabel booking
       echo "<tr>
               <td>{$no}</td>
               <td>{$row['nama']}</td>
               <td>{$row['layanan']}</td>
               <td>{$row['waktu']}</td>
             </tr>";
+      // Menambahkan nilai $no sebanyak 1 untuk baris berikutnya.
       $no++;
     }
     ?>
