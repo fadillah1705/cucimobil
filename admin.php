@@ -1,8 +1,8 @@
 <?php
-include 'koneksi.php';
+include 'conn.php';
 session_start();
 
-if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
+if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'Admin') {
   header("Location: login.php");
   exit;
 }
@@ -31,7 +31,9 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     </tr>
 
     <?php
-    $result = mysqli_query($conn, "SELECT * FROM booking ORDER BY waktu DESC");
+$result = mysqli_query($conn, "SELECT * FROM activity ORDER BY waktu ASC")
+          or die("Query Error: " . mysqli_error($conn));
+
     $no = 1;
     while ($row = mysqli_fetch_assoc($result)) {
       echo "<tr>
@@ -44,5 +46,7 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     }
     ?>
   </table>
+      <li><a class="dropdown-item" href="logout.php">Logout</a></li>
+
 </body>
 </html>

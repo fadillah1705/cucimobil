@@ -79,7 +79,7 @@ session_start();
             <p class="text-muted mt-3">Harga sekali cuci</p>
             <h5 class="fw-bold">Rp30.000</h5>
            <form action="wa.php" method="POST">
-  <input type="hidden" name="nama" value="Cuci Interior">
+  <input type="hidden" name="layanan" value="Cuci Interior">
   <button type="submit" class="btn btn-primary">Booking</button>
 </form>
 

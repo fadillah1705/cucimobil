@@ -1,30 +1,53 @@
 <?php
 include "conn.php";
 
+$message = "";
+
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  $username = $_POST['username'];
- $password = password_hash($_POST["password"], PASSWORD_DEFAULT);
+  $username = trim($_POST['username']);
+  $rawPassword = $_POST["password"];
+  $inputRole = $_POST["role"] ?? '';
 
-  // $role = $_POST["role"];
-
-  $sql = "INSERT INTO users (username, password) VALUES (?, ? )";
-  $stmt = $conn->prepare($sql);
-  $stmt->bind_param("ss", $username, $password);
-
-   if ($stmt->execute()) {
-    echo "<script>
-      alert('Registrasi berhasil!');
-      window.location.href = 'login.php';
-    </script>";
-    exit();
+  if (empty($username) || empty($rawPassword) || empty($inputRole)) {
+    $message = "Semua field harus diisi.";
   } else {
-    $message = "Registrasi gagal: " . $stmt->error;
-  }
+    // Enkripsi password
+    $password = password_hash($rawPassword, PASSWORD_DEFAULT);
 
-  $stmt->close();
+    // Cek apakah username sudah ada
+    $check = $conn->prepare("SELECT id FROM users WHERE username = ?");
+    $check->bind_param("s", $username);
+    $check->execute();
+    $check->store_result();
+
+    if ($check->num_rows > 0) {
+      $message = "Username sudah digunakan. Silakan pilih yang lain.";
+    } else {
+      // Simpan ke database
+      $sql = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
+      $stmt = $conn->prepare($sql);
+      $stmt->bind_param("sss", $username, $password, $inputRole);
+
+      if ($stmt->execute()) {
+        echo "<script>
+          alert('Registrasi berhasil!');
+          window.location.href = 'login.php';
+        </script>";
+        exit();
+      } else {
+        $message = "Registrasi gagal: " . $stmt->error;
+      }
+
+      $stmt->close();
+    }
+
+    $check->close();
+  }
 }
 ?>
 
+
+      
 
 
 
@@ -43,10 +66,19 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           <h3 class="text-center mb-4">Registrasi Akun</h3>
 
           <?php if (!empty($message)): ?>
-            <div class="alert alert-info"><?= $message ?></div>
+            <div class="alert alert-danger"><?= $message ?></div>
           <?php endif; ?>
-
+          
           <form method="POST">
+          <div class="mb-3">
+    <label class="form-label">Role</label>
+    <select class="form-select" name="role" required>
+      <option value="">Pilih Role</option>
+      <option value="admin">Admin</option>
+      <option value="user">User</option>
+    </select>
+  </div>
+
             <div class="mb-3">
               <label for="username" class="form-label">Username</label>
               <input type="text" class="form-control" name="username" required>
