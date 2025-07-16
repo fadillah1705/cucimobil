@@ -2,34 +2,43 @@
 session_start();
 include 'conn.php';
 
-// Ambil nama layanan dari POST
-$nama = $_POST['nama'] ?? '';
-
 // Cek apakah user sudah login
 if (!isset($_SESSION['username'])) {
-    // Belum login → redirect ke login
     header("Location: login.php");
     exit;
 }
 
 $username = $_SESSION['username'];
+$layan = $_POST['layanan'] ?? '';
 
-// Jika user sudah login dan data ada, simpan lalu redirect ke WA
-if (!empty($nama) && !empty($username)) {
-    $stmt = $conn->prepare("INSERT INTO activity (nama, username) VALUES (?, ?)");
+// Ambil nama lengkap user dari database
+$stmt = $conn->prepare("SELECT nama_lengkap FROM users WHERE username = ?");
+$stmt->bind_param("s", $username);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+
+$nama = !empty($user['nama_lengkap']) ? $user['nama_lengkap'] : $username;
+
+// Validasi data
+if (!empty($nama) && !empty($username) && !empty($layan)) {
+    // Simpan ke activity
+    $stmt = $conn->prepare("INSERT INTO activity (nama, layanan) VALUES (?, ?)");
     if ($stmt) {
-        $stmt->bind_param("ss", $nama, $username);
-        $stmt->execute();
+        $stmt->bind_param("ss", $nama, $layan);
+        if (!$stmt->execute()) {
+            die("Gagal menyimpan aktivitas: " . $stmt->error);
+        }
         $stmt->close();
+    } else {
+        die("Prepare gagal: " . $conn->error);
     }
-    
+
     // Redirect ke WhatsApp
-    $text = urlencode("Halo, saya ingin booking $nama. Apakah masih tersedia?");
-    $url = "https://wa.me/6281353638858?text=$text";
-    header("Location: $url");
+    $text = urlencode("Halo, saya ingin booking layanan $layan. Apakah masih tersedia?");
+    header("Location: https://wa.me/6281353638858?text=$text");
     exit;
 } else {
-    // Jika data tidak valid, kembali ke harga
     header("Location: harga.php");
     exit;
 }

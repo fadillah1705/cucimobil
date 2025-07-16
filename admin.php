@@ -1,4 +1,9 @@
 <?php
+include 'conn.php';
+session_start();
+
+if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'Admin') {
+
 include 'koneksi.php';
 // Memulai sesi PHP
 session_start();
@@ -35,6 +40,9 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     </tr>
 
     <?php
+$result = mysqli_query($conn, "SELECT * FROM activity ORDER BY waktu ASC")
+          or die("Query Error: " . mysqli_error($conn));
+
     // mengambil/melihat semua data dari tabel booking
     $result = mysqli_query($conn, "SELECT * FROM booking ORDER BY waktu DESC");
     // menampilkan no urut, dari no 1 jadi nanti seterusnya akan manual 2,3,4,..
@@ -55,5 +63,7 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     }
     ?>
   </table>
+      <li><a class="dropdown-item" href="logout.php">Logout</a></li>
+
 </body>
 </html>

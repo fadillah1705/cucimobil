@@ -1,5 +1,5 @@
 <?php
-include "conn.php"; // ganti dengan file koneksi database-mu
+include "conn.php";
 session_start();
 
 $message = "";
@@ -12,30 +12,47 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   $stmt = $conn->prepare($sql);
   $stmt->bind_param("s", $username);
   $stmt->execute();
-
   $result = $stmt->get_result();
 
   if ($result->num_rows === 1) {
     $user = $result->fetch_assoc();
 
     if (password_verify($password, $user["password"])) {
-    $_SESSION["username"] = $user["username"];
-    $_SESSION["role"] = $user["role"];
+      $_SESSION["username"] = $user["username"];
+      $_SESSION["role"] = $user["role"];
 
-    echo "<script>
-      alert('Login berhasil!');
-      window.location.href = 'index.php';
-    </script>";
-    exit();
-} else {
-    $message = "Password salah.";
-}
-
-
+      if (isset($_POST["login_admin"])) {
+        // Cek apakah benar admin
+        if ($user["role"] === "Admin") {
+          echo "<script>
+            alert('Login sebagai admin berhasil!');
+            window.location.href = 'admin.php';
+          </script>";
+        } else {
+          echo "<script>
+            alert('Akses ditolak. Bukan akun admin.');
+            window.location.href = 'login.php';
+          </script>";
+        }
+      } else {
+        // Login user biasa
+        echo "<script>
+          alert('Login berhasil!');
+          window.location.href = 'index.php';
+        </script>";
+      }
+      exit();
+    } else {
+      $message = "Password salah.";
+    }
+  } else {
+    $message = "Username tidak ditemukan.";
+  }
 
   $stmt->close();
-}}
+}
 ?>
+
 
 
 
@@ -57,6 +74,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
             <div class="alert alert-danger"><?= $error ?></div>
           <?php endif; ?>
 
+           
+
          <form method="POST">
   <div class="mb-3">
     <label class="form-label">Username</label>
@@ -71,6 +90,9 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 <button type="button" class="btn btn-success w-100" onclick="window.location.href='index.php'">
   Masuk tanpa akun
 </button>
+
+ <button type="submit" name="login_admin" >Login Admin</button>
+
 
   <?php if (!empty($message)): ?>
     <div class="alert alert-danger text-center mt-3">
