@@ -16,7 +16,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 
     // Cek apakah username sudah ada
-    $check = $conn->prepare("SELECT id FROM users WHERE username = ?");
+    $check = $conn->prepare("SELECT id FROM mencuci WHERE username = ?");
     $check->bind_param("s", $username);
     $check->execute();
     $check->store_result();
@@ -30,7 +30,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       $message = "Username sudah digunakan. Silakan pilih yang lain.";
     } else {
       // Simpan ke database
-      $sql = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
+      $sql = "INSERT INTO mencuci (username, password, role) VALUES (?, ?, ?)";
       $stmt = $conn->prepare($sql);
       $stmt->bind_param("sss", $username, $password, $inputRole);
 

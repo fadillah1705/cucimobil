@@ -96,7 +96,7 @@ session_start();
       <p class="text-muted mt-3">Harga sekali cuci</p>
       <h5 class="fw-bold">Rp30.000</h5>
     <form action="wa.php" method="POST">
-  <input type="hidden" name="nama" value="Cuci Interior">
+  <input type="hidden" name="layanan" value="Cuci Interior">
   <button type="submit" class="btn btn-primary">Booking</button>
 </form>
     </div>
@@ -113,7 +113,7 @@ session_start();
             <h5 class="fw-bold">Rp45.000</h5>
 
            <form action="wa.php" method="POST">
-  <input type="hidden" name="nama" value="Cuci Mobil Exterior">
+  <input type="hidden" name="layanan" value="Cuci Mobil Exterior">
   <button type="submit" class="btn btn-primary">Booking</button>
 </form>
 
@@ -133,7 +133,7 @@ session_start();
             <h5 class="fw-bold">Rp65.000</h5>
 
            <form action="wa.php" method="POST">
-  <input type="hidden" name="nama" value="Detailing">
+  <input type="hidden" name="layanan" value="Detailing">
   <button type="submit" class="btn btn-primary">Booking</button>
 </form>
 
@@ -155,7 +155,7 @@ session_start();
             <h5 class="fw-bold">Rp40.000</h5>
 
             <form action="wa.php" method="POST">
-  <input type="hidden" name="nama" value="Cuci Biasa">
+  <input type="hidden" name="layanan" value="Cuci Biasa">
   <button type="submit" class="btn btn-primary">Booking</button>
 </form>
 
@@ -173,7 +173,7 @@ session_start();
             <h5 class="fw-bold">Rp1.500.000</h5>
 
             <form action="wa.php" method="POST">
-  <input type="hidden" name="nama" value="Salon Mobil Kaca">
+  <input type="hidden" name="layanan" value="Salon Mobil Kaca">
   <button type="submit" class="btn btn-primary">Booking</button>
 </form>
 
@@ -191,7 +191,7 @@ session_start();
             <h5 class="fw-bold">Rp50.000</h5>
 
             <form action="wa.php" method="POST">
-  <input type="hidden" name="nama" value="Perbaikan">
+  <input type="hidden" name="layanan" value="Perbaikan">
   <button type="submit" class="btn btn-primary">Booking</button>
 </form>
 
