@@ -17,11 +17,11 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
 <head>
   <meta charset="UTF-8">
   <title>Admin Booking</title>
-  <!-- <style>
+  <style>
     table { width: 100%; border-collapse: collapse; margin-top: 30px; }
     th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
     th { background-color: #f4f4f4; }
-  </style> -->
+  </style>
 </head>
 <body>
   <h2>Data Booking Pelanggan</h2>
