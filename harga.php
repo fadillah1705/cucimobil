@@ -39,7 +39,8 @@ session_start();
           <a class="nav-link active" href="kontak.php">Kontak</a>
         </li>
          <!-- profile -->
-      <?php if (isset($_SESSION['username'])): ?>
+          <!--  Cek apakah user sudah login -->
+  <?php if (isset($_SESSION['username'])): ?>
   <!-- ✅ User sudah login -->
   <li class="nav-item dropdown">
     <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">

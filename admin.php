@@ -34,6 +34,7 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    
   }
 
   th, td {

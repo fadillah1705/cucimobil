@@ -4,10 +4,11 @@ include 'conn.php';
 
 // Cek apakah user sudah login
 if (!isset($_SESSION['username'])) {
+    // kalo belum akan di arahkan ke tombol login
     header("Location: login.php");
     exit;
 }
-
+// mengambil nama dan juga layanan yang sudah di isi
 $username = $_SESSION['username'];
 $layan = $_POST['layanan'] ?? '';
 
