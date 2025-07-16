@@ -4,9 +4,23 @@ session_start();
 
 $message = "";
 
+// Proses login apapun
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  $username = $_POST["username"];
-  $password = $_POST["password"];
+
+  // ✅ Login sebagai tamu
+  if (isset($_POST["login_guest"])) {
+    $_SESSION["username"] = "Tamu";
+    $_SESSION["role"] = "guest";
+    echo "<script>
+      alert('Masuk sebagai tamu berhasil!');
+      window.location.href = 'index.php';
+    </script>";
+    exit;
+  }
+
+  // ✅ Login sebagai user/admin
+  $username = $_POST["username"] ?? '';
+  $password = $_POST["password"] ?? '';
 
   $sql = "SELECT * FROM mencuci WHERE username = ?";
   $stmt = $conn->prepare($sql);
@@ -22,8 +36,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       $_SESSION["role"] = $user["role"];
 
       if (isset($_POST["login_admin"])) {
-        // Cek apakah benar admin
-        if ($user["role"] === "Admin") {
+        if ($user["role"] === "admin") {
           echo "<script>
             alert('Login sebagai admin berhasil!');
             window.location.href = 'admin.php';
@@ -35,7 +48,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           </script>";
         }
       } else {
-        // Login user biasa
         echo "<script>
           alert('Login berhasil!');
           window.location.href = 'index.php';
@@ -52,8 +64,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   $stmt->close();
 }
 ?>
-
-
 
 
 <!DOCTYPE html>
@@ -76,34 +86,44 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
            
 
-         <form method="POST">
+       <!-- FORM LOGIN USER / ADMIN -->
+<form method="POST">
   <div class="mb-3">
     <label class="form-label">Username</label>
     <input type="text" class="form-control" name="username" required>
   </div>
+
   <div class="mb-3">
     <label class="form-label">Password</label>
     <input type="password" class="form-control" name="password" required>
   </div>
-  <button type="submit" class="btn btn-success w-100">Login</button>
-  <br>
-<button type="button" class="btn btn-success w-100" onclick="window.location.href='index.php'">
-  Masuk tanpa akun
-</button>
 
- <button type="submit" name="login_admin" >Login Admin</button>
+  <!-- Tombol Login User -->
+  <button type="submit" name="login_user" class="btn btn-success w-100 mb-2">Login User</button>
 
-
-  <?php if (!empty($message)): ?>
-    <div class="alert alert-danger text-center mt-3">
-      <?= $message ?>
-    </div>
-  <?php endif; ?>
+  <!-- Tombol Login Admin -->
+  <button type="submit" name="login_admin" class="btn btn-primary w-100 mb-2">Login Admin</button>
 </form>
 
-              Belum punya akun? <a href="regis.php">Daftar</a>
-            </div>
-          </form>
+<!-- FORM MASUK TANPA AKUN (TERPISAH) -->
+<form method="POST">
+  <input type="hidden" name="login_guest" value="1">
+  <button type="submit" class="btn btn-outline-secondary w-100 mb-3">Masuk tanpa akun</button>
+</form>
+
+<!-- Pesan Error -->
+<?php if (!empty($message)): ?>
+  <div class="alert alert-danger text-center">
+    <?= $message ?>
+  </div>
+<?php endif; ?>
+
+<!-- Link Daftar -->
+<div class="text-center mt-3">
+  Belum punya akun? <a href="regis.php">Daftar</a>
+</div>
+
+
         </div>
       </div>
     </div>

@@ -2,10 +2,18 @@
 session_start();
 include 'conn.php';
 
+// ⛔ Pertama, pastikan user sudah login dulu
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit;
 }
+
+// ✅ Kedua, larang akses tamu (role = guest)
+if ($_SESSION['role'] === 'guest') {
+    header("Location: index.php");
+    exit;
+}
+
 
 $username = $_SESSION['username'];
 $role = $_SESSION['role'] ?? '';
