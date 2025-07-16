@@ -95,7 +95,7 @@ session_start();
 </div>
         </div>
         <div class="col-md-6 text-center">
-          <img src="Biru Hitam Moderen Rental Mobil Postingan Facebook.png" class="img-fluid" alt="Cuci Mobil">
+          <img src="uploads/Biru Hitam Moderen Rental Mobil Postingan Facebook.png" class="img-fluid" alt="Cuci Mobil">
          
         </div>
        
