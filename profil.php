@@ -2,7 +2,25 @@
 include 'conn.php';
 session_start();
 
+
 $username = $_SESSION['username'] ?? '';
+
+// Pertama, pastikan user sudah login dulu
+if (!isset($_SESSION['username'])) {
+    header("Location: login.php");
+    exit;
+}
+
+// ✅ Kedua, larang akses tamu (role = guest)
+if ($_SESSION['role'] === 'guest') {
+    header("Location: index.php");
+    exit;
+}
+
+
+$username = $_SESSION['username'];
+$role = $_SESSION['role'] ?? '';
+
 
 // Ambil data user dari database
 $stmt = $conn->prepare("SELECT nama_lengkap, foto, gender FROM users WHERE username = ?");

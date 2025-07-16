@@ -1,6 +1,12 @@
 <?php
 session_start();
 
+// Jika belum login, tetapkan sebagai tamu
+if (!isset($_SESSION['username'])) {
+  $_SESSION['username'] = 'Tamu';
+  $_SESSION['role'] = 'guest';
+}
+
 
 ?> 
 <!DOCTYPE html>
@@ -42,8 +48,8 @@ session_start();
         </li>
        
  <!-- profile -->
-      <?php if (isset($_SESSION['username'])): ?>
-  <!-- ✅ User sudah login -->
+<?php if (isset($_SESSION['username']) && $_SESSION['role'] !== 'guest'): ?>
+  <!-- ✅ User login sebagai user/admin -->
   <li class="nav-item dropdown">
     <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
       <i class="bi bi-person-circle"></i> Profil
@@ -55,13 +61,14 @@ session_start();
     </ul>
   </li>
 <?php else: ?>
-  <!-- ❌ User belum login -->
+  <!-- ❌ User belum login atau tamu -->
   <li class="nav-item">
     <a class="nav-link" href="login.php">
       <i class="bi bi-box-arrow-in-right"></i> Login
     </a>
   </li>
 <?php endif; ?>
+
 
 
       </ul>

@@ -4,7 +4,8 @@ $user = "root";
 $pass = "";
 $db   = "cuci_mobil";
 
-$conn = new mysqli($host, $user, $pass, $db);
+$conn = new mysqli("localhost", "root", "", "cucimobil");
+
 
 if ($conn->connect_error) {
     die("Koneksi gagal: " . $conn->connect_error);
