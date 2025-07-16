@@ -38,15 +38,27 @@ session_start();
         <li class="nav-item">
           <a class="nav-link active" href="kontak.php">Kontak</a>
         </li>
-         <li class="nav-item dropdown">
-      <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-     <i class="bi bi-person-circle"></i> Profil </a>
-     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-    <li><a class="dropdown-item" href="profil.php">Lihat Profil</a></li>
-    <li><hr class="dropdown-divider"></li>
-    <li><a class="dropdown-item" href="logout.php">Logout</a></li>
-  </ul>
-</li>
+         <!-- profile -->
+      <?php if (isset($_SESSION['username'])): ?>
+  <!-- ✅ User sudah login -->
+  <li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <i class="bi bi-person-circle"></i> Profil
+    </a>
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+      <li><a class="dropdown-item" href="profil.php">Lihat Profil</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item" href="logout.php">Logout</a></li>
+    </ul>
+  </li>
+<?php else: ?>
+  <!-- ❌ User belum login -->
+  <li class="nav-item">
+    <a class="nav-link" href="login.php">
+      <i class="bi bi-box-arrow-in-right"></i> Login
+    </a>
+  </li>
+<?php endif; ?>
       </ul>
     </div>
   </div>
