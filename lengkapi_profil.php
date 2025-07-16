@@ -20,11 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         move_uploaded_file($foto['tmp_name'], "uploads/$fotoName");
 
         // SQL jika ada foto
-        $stmt = $conn->prepare("UPDATE users SET nama_lengkap = ?, gender = ?, foto = ? WHERE username = ?");
+        $stmt = $conn->prepare("UPDATE mencuci SET nama_lengkap = ?, gender = ?, foto = ? WHERE username = ?");
         $stmt->bind_param("ssss", $namaLengkap, $gender, $fotoName, $username);
     } else {
         // SQL jika tidak ada foto
-        $stmt = $conn->prepare("UPDATE users SET nama_lengkap = ?, gender = ? WHERE username = ?");
+        $stmt = $conn->prepare("UPDATE mencuci SET nama_lengkap = ?, gender = ? WHERE username = ?");
         $stmt->bind_param("sss", $namaLengkap, $gender, $username);
     }
 
@@ -39,9 +39,86 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
   <meta charset="UTF-8">
   <title>Lengkapi Profil</title>
+  <link rel="stylesheet" href="style.css">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body class="bg-light">
+<body>
+  <style>
+/* ---------- Container & Card ---------- */
+.container {
+  animation: fadeIn 0.8s ease-in-out;
+}
+
+.card {
+  border-radius: 20px;
+  border: none;
+  background: linear-gradient(145deg, #ffffff, #c7ffffff);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  padding: 30px 25px;
+}
+
+/* ---------- Judul ---------- */
+.card h4 {
+  font-weight: bold;
+  color: rgb(58, 159, 167);
+  font-family: 'Poppins', sans-serif;
+}
+
+/* ---------- Label & Input ---------- */
+.form-label {
+  font-weight: 500;
+  color: #495057;
+}
+
+.form-control,
+.form-select {
+  border-radius: 12px;
+  border: 1px solid #c3e3e5;
+  background-color: #ffffff;
+  transition: 0.3s ease;
+}
+
+.form-control:focus,
+.form-select:focus {
+  box-shadow: 0 0 6px rgba(58, 159, 167, 0.4);
+  border-color: rgb(58, 159, 167);
+}
+
+/* ---------- Button ---------- */
+.btn {
+  border-radius: 15px;
+  font-weight: 500;
+  padding: 10px;
+  font-family: 'Poppins', sans-serif;
+  transition: 0.3s ease;
+}
+
+.btn[type="submit"] {
+  background-color: rgb(58, 159, 167);
+  color: white;
+  border: none;
+}
+
+.btn[type="submit"]:hover {
+  background-color: rgb(45, 134, 140);
+}
+
+.btn[href] {
+  background-color: #adb5bd;
+  color: white;
+  border: none;
+}
+
+.btn[href]:hover {
+  background-color: #8e959b;
+}
+
+/* ---------- Animasi Fade ---------- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+  </style>
 
 <div class="container mt-5">
   <div class="card mx-auto p-4 shadow-sm" style="max-width: 500px;">
@@ -62,8 +139,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </div>
 
       <div class="d-grid gap-2">
-        <button type="submit" class="btn btn-primary">Simpan</button>
-        <a href="profil.php" class="btn btn-secondary">Batal</a>
+        <button type="submit" class="btn">Simpan</button>
+        <a href="profil.php" class="btn">Batal</a>
       </div>
     </form>
   </div>

@@ -7,7 +7,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
   // $role = $_POST["role"];
 
-  $sql = "INSERT INTO users (username, password) VALUES (?, ? )";
+  $sql = "INSERT INTO mencuci (username, password) VALUES (?, ? )";
   $stmt = $conn->prepare($sql);
   $stmt->bind_param("ss", $username, $password);
 
