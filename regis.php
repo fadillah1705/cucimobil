@@ -1,28 +1,30 @@
 <?php
-include "db.php";
+include "conn.php";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  $username = $_POST["username"];
-  $password = password_hash($_POST["password"], PASSWORD_DEFAULT);
-  $role = $_POST["role"];
+  $username = $_POST['username'];
+ $password = password_hash($_POST["password"], PASSWORD_DEFAULT);
 
-  $sql = "INSERT INTO mencuci (username, password, role) VALUES (?, ?, ?)";
+  // $role = $_POST["role"];
+
+  $sql = "INSERT INTO users (username, password) VALUES (?, ? )";
   $stmt = $conn->prepare($sql);
-  $stmt->bind_param("sss", $username, $password, $role);
+  $stmt->bind_param("ss", $username, $password);
 
-  if ($stmt->execute()) {
-    echo "<div class='text-center mt-4'>
-            Registrasi berhasil. <a href='login.php'>Login</a>
-          </div>";
+   if ($stmt->execute()) {
+    echo "<script>
+      alert('Registrasi berhasil!');
+      window.location.href = 'login.php';
+    </script>";
+    exit();
   } else {
-    echo "<div class='text-center mt-4 text-danger'>
-            Error: " . $stmt->error . "
-          </div>";
+    $message = "Registrasi gagal: " . $stmt->error;
   }
 
   $stmt->close();
 }
 ?>
+
 
 
 
@@ -45,13 +47,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           <?php endif; ?>
 
           <form method="POST">
-           <div class="mb-3">
-    <label for="role" class="form-label">Role</label>
-    <select class="form-control" name="role" required>
-      <option value="user">User</option>
-      <option value="admin">Admin</option>
-    </select>
-  </div>
             <div class="mb-3">
               <label for="username" class="form-label">Username</label>
               <input type="text" class="form-control" name="username" required>
