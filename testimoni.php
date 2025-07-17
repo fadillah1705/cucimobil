@@ -43,9 +43,10 @@ session_start();
       <?php if (isset($_SESSION['username'])): ?>
   <!-- ✅ User sudah login -->
   <li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-      <i class="bi bi-person-circle"></i> Profil
-    </a>
+<a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+  <i class="bi bi-person-circle"></i>
+  Haii, <?php echo htmlspecialchars($_SESSION['username']); ?>!
+</a>
     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
       <li><a class="dropdown-item" href="profil.php">Lihat Profil</a></li>
       <li><hr class="dropdown-divider"></li>
