@@ -70,6 +70,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ganti_password'])) {
     <button class="btn btn-primary w-100" data-bs-toggle="modal" data-bs-target="#gantiPasswordModal">
       🔒 Ganti Password
     </button>
+<br>
+    <!-- Tombol Kembali -->
+<a href="lengkapi_profil.php" class="btn btn-secondary w-100">
+  Kembali ke Profil
+</a>
   </div>
 </div>
 
