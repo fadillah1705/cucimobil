@@ -6,7 +6,7 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] === 'guest') {
     header("Location: login.php");
     exit;
 }
-
+// mengambil nama dan juga layanan yang sudah di isi
 $username = $_SESSION['username'];
 $role = $_SESSION['role'] ?? '';
 $layan = $_POST['layanan'] ?? '';

@@ -30,11 +30,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $fotoName = null;
 
+     // Proses upload foto jika ada
+
     // Proses upload foto jika ada
+
     if ($foto && $foto['error'] === UPLOAD_ERR_OK) {
         $ext = pathinfo($foto['name'], PATHINFO_EXTENSION);
         $fotoName = $newUsername . "_" . time() . "." . $ext;
         move_uploaded_file($foto['tmp_name'], "uploads/$fotoName");
+
+}
+ // Bangun SQL sesuai kondisi
+    $sql = "UPDATE users SET nama_lengkap = ?, gender = ?, username = ?" . 
+           (!empty($fotoName) ? ", foto = ?" : "") . 
+           " WHERE username = ?";
+
+    // Bangun parameter binding
+    $types = "sss"; // nama_lengkap, gender, username
+    $params = [$namaLengkap, $gender, $newUsername];
+ if (!empty($fotoName)) {
+        $types .= "s";
+        $params[] = $fotoName;
+ }
+
+  $types .= "s"; // old username
+
     }
 
     // Bangun SQL sesuai kondisi
@@ -52,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $types .= "s"; // old username
+
     $params[] = $oldUsername;
 
     $stmt = $conn->prepare($sql);
@@ -63,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     header("Location: profil.php");
     exit;
-}
+
 ?>
 
 

@@ -48,8 +48,9 @@ if (!isset($_SESSION['username'])) {
         </li>
        
  <!-- profile -->
+  <!-- Mengecek apakah sesi username sudah ada (user sudah login). -->
 <?php if (isset($_SESSION['username']) && $_SESSION['role'] !== 'guest'): ?>
-  <!-- ✅ User login sebagai user/admin -->
+ <!--  tampilkan dropdown Profil + Logout.-->
   <li class="nav-item dropdown">
     <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
       <i class="bi bi-person-circle"></i> Profil
@@ -61,7 +62,8 @@ if (!isset($_SESSION['username'])) {
     </ul>
   </li>
 <?php else: ?>
-  <!-- ❌ User belum login atau tamu -->
+  <!-- ❌ User belum login -->
+   <!-- tampilkan tombol login -->
   <li class="nav-item">
     <a class="nav-link" href="login.php">
       <i class="bi bi-box-arrow-in-right"></i> Login
