@@ -185,6 +185,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
       <div class="d-grid gap-2">
+
          <a href="pw.php" class="btn">Ubah Password</a>
         <a href="profil.php" class="btn">Batal</a>
        <button type="submit" class="btn">Simpan</button>
