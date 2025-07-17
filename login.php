@@ -4,11 +4,10 @@ session_start();
 
 $message = "";
 
-// Proses login apapun
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-  // ✅ Login sebagai tamu
-  if (isset($_POST["login_guest"])) {
+  // Login tamu
+  if (isset($_POST["login"]) && $_POST["login"] === "guest") {
     $_SESSION["username"] = "Tamu";
     $_SESSION["role"] = "guest";
     echo "<script>
@@ -18,9 +17,10 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     exit;
   }
 
-  // ✅ Login sebagai user/admin
+  // Login user/admin
   $username = $_POST["username"] ?? '';
   $password = $_POST["password"] ?? '';
+  $loginType = $_POST["login"] ?? 'user'; // default user
 
   $sql = "SELECT * FROM mencuci WHERE username = ?";
   $stmt = $conn->prepare($sql);
@@ -35,7 +35,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
       $_SESSION["username"] = $user["username"];
       $_SESSION["role"] = $user["role"];
 
-      if (isset($_POST["login_admin"])) {
+      if ($loginType === "admin") {
         if ($user["role"] === "admin") {
           echo "<script>
             alert('Login sebagai admin berhasil!');
@@ -64,8 +64,6 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
   $stmt->close();
 }
 ?>
-
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
@@ -80,49 +78,32 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         <div class="card shadow p-4">
           <h3 class="text-center mb-4">Login</h3>
 
-          <?php if (!empty($error)): ?>
-            <div class="alert alert-danger"><?= $error ?></div>
+          <!-- FORM SATU -->
+          <form method="POST">
+            <div class="mb-3">
+              <label class="form-label">Username</label>
+              <input type="text" class="form-control" name="username" required>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input type="password" class="form-control" name="password" required>
+            </div>
+
+            <button type="submit" name="login" value="user" class="btn btn-success w-100 mb-2">Login User</button>
+            <button type="submit" name="login" value="admin" class="btn btn-primary w-100 mb-2">Login Admin</button>
+            <button type="submit" name="login" value="guest" class="btn btn-outline-secondary w-100 mb-3">Masuk tanpa akun</button>
+          </form>
+
+          <!-- Pesan Error -->
+          <?php if (!empty($message)): ?>
+            <div class="alert alert-danger text-center"><?= $message ?></div>
           <?php endif; ?>
 
-           
-
-       <!-- FORM LOGIN USER / ADMIN -->
-<form method="POST">
-  <div class="mb-3">
-    <label class="form-label">Username</label>
-    <input type="text" class="form-control" name="username" required>
-  </div>
-
-  <div class="mb-3">
-    <label class="form-label">Password</label>
-    <input type="password" class="form-control" name="password" required>
-  </div>
-
-  <!-- Tombol Login User -->
-  <button type="submit" name="login_user" class="btn btn-success w-100 mb-2">Login User</button>
-
-  <!-- Tombol Login Admin -->
-  <button type="submit" name="login_admin" class="btn btn-primary w-100 mb-2">Login Admin</button>
-</form>
-
-<!-- FORM MASUK TANPA AKUN (TERPISAH) -->
-<form method="POST">
-  <input type="hidden" name="login_guest" value="1">
-  <button type="submit" class="btn btn-outline-secondary w-100 mb-3">Masuk tanpa akun</button>
-</form>
-
-<!-- Pesan Error -->
-<?php if (!empty($message)): ?>
-  <div class="alert alert-danger text-center">
-    <?= $message ?>
-  </div>
-<?php endif; ?>
-
-<!-- Link Daftar -->
-<div class="text-center mt-3">
-  Belum punya akun? <a href="regis.php">Daftar</a>
-</div>
-
+          <!-- Link Daftar -->
+          <div class="text-center mt-3">
+            Belum punya akun? <a href="regis.php">Daftar</a>
+          </div>
 
         </div>
       </div>
