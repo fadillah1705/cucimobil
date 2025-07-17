@@ -75,7 +75,7 @@ foreach ($bookingDetail as $row) {
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
   <style>
- body {
+  body {
   background-color: #f0fdf4;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
@@ -153,9 +153,7 @@ table td {
 .logout-link a:hover {
   background-color: #c0392b;
 }
-
 </style>
-
 </head>
 <body>
 <div class="container my-4">
