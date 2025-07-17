@@ -5,8 +5,6 @@ session_start();
 // Ini adalah kondisi pengecekan login dan role:
 // !isset($_SESSION['username']) → jika user belum login
 // $_SESSION['role'] !== 'admin' → jika user login tapi bukan admin
-
-session_start();
 include 'conn.php';
 
 // Cek login dan role admin
@@ -72,11 +70,7 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     border-radius: 8px;
     font-weight: 500;
     transition: background-color 0.3s ease;
-<<<<<<< HEAD
-=======
-  
-    
->>>>>>> 4c2a7c7 (mengubah profil, dll)
+
   }
 
   .logout-link:hover {
@@ -97,17 +91,17 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     </tr>
 
     <?php
-<<<<<<< HEAD
 
-$result = mysqli_query($conn, "SELECT * FROM activity ORDER BY waktu ASC")
+
+$result = mysqli_query($conn, "SELECT * FROM booking ORDER BY waktu ASC")
           or die("Query Error: " . mysqli_error($conn));
     // mengambil/melihat semua data dari tabel booking
-    $result = mysqli_query($conn, "SELECT * FROM activity ORDER BY waktu DESC");
+    $result = mysqli_query($conn, "SELECT * FROM booking ORDER BY waktu DESC");
     // menampilkan no urut, dari no 1 jadi nanti seterusnya akan manual 2,3,4,..
-=======
+
     $query = "SELECT * FROM booking ORDER BY waktu DESC";
     $result = mysqli_query($conn, $query) or die("Query Error: " . mysqli_error($conn));
->>>>>>> 4c2a7c7 (mengubah profil, dll)
+
     $no = 1;
 
     while ($row = mysqli_fetch_assoc($result)) {
@@ -121,14 +115,9 @@ $result = mysqli_query($conn, "SELECT * FROM activity ORDER BY waktu ASC")
     }
     ?>
   </table>
-<<<<<<< HEAD
-     <li><a class="dropdown-item" href="logout.php">Logout</a></li>
-=======
 
   <div class="logout-link ">
     <a href="logout.php">Logout</a>
   </div>
-
->>>>>>> 4c2a7c7 (mengubah profil, dll)
 </body>
 </html>

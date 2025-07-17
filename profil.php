@@ -23,7 +23,7 @@ $role = $_SESSION['role'] ?? '';
 
 
 // Ambil data user dari database
-$stmt = $conn->prepare("SELECT nama_lengkap, foto, gender FROM users WHERE username = ?");
+$stmt = $conn->prepare("SELECT nama_lengkap, foto, gender FROM mencuci WHERE username = ?");
 $stmt->bind_param("s", $username);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     if (!empty($foto) && file_exists("uploads/$foto")) {
         unlink("uploads/$foto");
     }
-    $stmt = $conn->prepare("UPDATE users SET foto = NULL WHERE username = ?");
+    $stmt = $conn->prepare("UPDATE mencuci SET foto = NULL WHERE username = ?");
     $stmt->bind_param("s", $username);
     $stmt->execute();
     header("Location: profil.php");
@@ -71,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         move_uploaded_file($_FILES['foto']['tmp_name'], "uploads/$namaBaru");
 
-        $stmt = $conn->prepare("UPDATE users SET foto = ? WHERE username = ?");
+        $stmt = $conn->prepare("UPDATE mencuci SET foto = ? WHERE username = ?");
         $stmt->bind_param("ss", $namaBaru, $username);
         $stmt->execute();
 
