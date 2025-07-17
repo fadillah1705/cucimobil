@@ -92,7 +92,7 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
 
     
 
-    <?php
+ <?php
 
 // Query: Ambil semua data dari tabel booking, diurutkan berdasarkan waktu dari terbaru ke terlama (DESC)
 $query = "SELECT * FROM booking ORDER BY waktu DESC";
