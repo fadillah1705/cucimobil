@@ -94,15 +94,10 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
 
     <?php
 
-    //  Ini mengambil semua data dari tabel booking, diurutkan berdasarkan waktu secara naik (lama ke baru).
-    $result = mysqli_query($conn, "SELECT * FROM booking ORDER BY waktu ASC")
-          or die("Query Error: " . mysqli_error($conn));
+// Query: Ambil semua data dari tabel booking, diurutkan berdasarkan waktu dari terbaru ke terlama (DESC)
+$query = "SELECT * FROM booking ORDER BY waktu DESC";
+$result = mysqli_query($conn, $query) or die("Query Error: " . mysqli_error($conn));
 
-    // mengambil/melihat semua data dari tabel booking
-    $result = mysqli_query($conn, "SELECT * FROM booking ORDER BY waktu DESC");
-   
-    $query = "SELECT * FROM booking ORDER BY waktu DESC";
-    $result = mysqli_query($conn, $query) or die("Query Error: " . mysqli_error($conn));
 // kamu memberikan nilai awal 1..
     $no = 1;
 // Melakukan perulangan (while) selama masih ada baris data dalam hasil query ($result).
