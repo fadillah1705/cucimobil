@@ -6,7 +6,21 @@ if (!isset($_SESSION['username'])) {
 }
 include 'conn.php';
 
-$username = $_SESSION['username'];
+$oldUsername = $_SESSION['username'];
+$namaLengkap = '';
+$gender = '';
+
+// AMBIL DATA DARI DATABASE (supaya muncul di form)
+$stmt = $conn->prepare("SELECT nama_lengkap, gender FROM users WHERE username = ?");
+$stmt->bind_param("s", $oldUsername);
+$stmt->execute();
+$result = $stmt->get_result();
+if ($result->num_rows > 0) {
+    $userData = $result->fetch_assoc();
+    $namaLengkap = $userData['nama_lengkap'];
+    $gender = $userData['gender'];
+}
+$stmt->close();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $namaLengkap = $_POST['nama_lengkap'] ?? '';
@@ -17,10 +31,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fotoName = null;
 
      // Proses upload foto jika ada
+
+    // Proses upload foto jika ada
+
     if ($foto && $foto['error'] === UPLOAD_ERR_OK) {
         $ext = pathinfo($foto['name'], PATHINFO_EXTENSION);
         $fotoName = $newUsername . "_" . time() . "." . $ext;
         move_uploaded_file($foto['tmp_name'], "uploads/$fotoName");
+
 }
  // Bangun SQL sesuai kondisi
     $sql = "UPDATE users SET nama_lengkap = ?, gender = ?, username = ?" . 
@@ -36,6 +54,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  }
 
   $types .= "s"; // old username
+
+    }
+
+    // Bangun SQL sesuai kondisi
+    $sql = "UPDATE users SET nama_lengkap = ?, gender = ?, username = ?" . 
+           (!empty($fotoName) ? ", foto = ?" : "") . 
+           " WHERE username = ?";
+
+    // Bangun parameter binding
+    $types = "sss"; // nama_lengkap, gender, username
+    $params = [$namaLengkap, $gender, $newUsername];
+
+    if (!empty($fotoName)) {
+        $types .= "s";
+        $params[] = $fotoName;
+    }
+
+    $types .= "s"; // old username
+
     $params[] = $oldUsername;
 
     $stmt = $conn->prepare($sql);
@@ -47,8 +84,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     header("Location: profil.php");
     exit;
-}
+
 ?>
+
+
+
+
 
 <!DOCTYPE html>
 <html lang="id">
@@ -141,22 +182,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <h4 class="mb-4 text-center">Lengkapi Profil</h4>
 
     <form method="POST" enctype="multipart/form-data">
+    <div class="mb-3">
+  <label for="username" class="form-label">Username Baru</label>
+  <input type="text" class="form-control" name="username" value="<?= htmlspecialchars($oldUsername) ?>" required>
+</div>
+
       <div class="mb-3">
-        <label for="nama_lengkap" class="form-label">Nama Lengkap</label>
-        <input type="text" class="form-control" id="nama_lengkap" name="nama_lengkap" required>
-      </div>
-       <div class="mb-3">
-        <label for="gender" class="form-label">Jenis Kelamin</label>
-        <select class="form-select" name="gender" id="gender" required>
-          <option value="" disabled selected>-- Pilih --</option>
-          <option value="Pria">Pria</option>
-          <option value="Wanita">Wanita</option>
-        </select>
-      </div>
+  <label for="nama_lengkap" class="form-label">Nama Lengkap</label>
+  <input type="text" class="form-control" id="nama_lengkap" name="nama_lengkap"
+         value="<?= htmlspecialchars($namaLengkap) ?>" required>
+</div>
+
+<div class="mb-3">
+  <label for="gender" class="form-label">Jenis Kelamin</label>
+  <select class="form-select" name="gender" id="gender" required>
+    <option value="" disabled <?= $gender == '' ? 'selected' : '' ?>>-- Pilih --</option>
+    <option value="Pria" <?= $gender == 'Pria' ? 'selected' : '' ?>>Pria</option>
+    <option value="Wanita" <?= $gender == 'Wanita' ? 'selected' : '' ?>>Wanita</option>
+  </select>
+</div>
+
 
       <div class="d-grid gap-2">
         <button type="submit" class="btn">Simpan</button>
         <a href="profil.php" class="btn">Batal</a>
+        <a href="pw.php" class="btn">Ubah Password</a>
       </div>
     </form>
   </div>
