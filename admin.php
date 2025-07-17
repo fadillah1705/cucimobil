@@ -2,13 +2,12 @@
 include 'koneksi.php';
 // Memulai sesi PHP
 session_start();
-// Ini adalah kondisi pengecekan login dan role:
-// !isset($_SESSION['username']) → jika user belum login
-// $_SESSION['role'] !== 'admin' → jika user login tapi bukan admin
-include 'conn.php';
 
-// Cek login dan role admin
+ $_SESSION['role'] !== 'admin' → jika user login tapi bukan admin
+
+
 if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
+  // maka akan di arahkan ke halaman login
   header("Location: login.php");
   exit;
 }
@@ -38,6 +37,7 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     border-radius: 12px;
     overflow: hidden;
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    
   }
 
   th, td {
@@ -70,7 +70,10 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     border-radius: 8px;
     font-weight: 500;
     transition: background-color 0.3s ease;
+<<<<<<< HEAD
 
+=======
+>>>>>>> ed0c355d6852244f1b215bb0dcc4b411ff745ff8
   }
 
   .logout-link:hover {
@@ -90,8 +93,11 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
       <th>Waktu</th>
     </tr>
 
+    
+
     <?php
 
+<<<<<<< HEAD
 
 $result = mysqli_query($conn, "SELECT * FROM booking ORDER BY waktu ASC")
           or die("Query Error: " . mysqli_error($conn));
@@ -102,22 +108,42 @@ $result = mysqli_query($conn, "SELECT * FROM booking ORDER BY waktu ASC")
     $query = "SELECT * FROM booking ORDER BY waktu DESC";
     $result = mysqli_query($conn, $query) or die("Query Error: " . mysqli_error($conn));
 
-    $no = 1;
+=======
+// Query: Ambil semua data dari tabel booking, diurutkan berdasarkan waktu dari terbaru ke terlama (DESC)
+$query = "SELECT * FROM booking ORDER BY waktu DESC";
+$result = mysqli_query($conn, $query) or die("Query Error: " . mysqli_error($conn));
 
+// kamu memberikan nilai awal 1..
+>>>>>>> ed0c355d6852244f1b215bb0dcc4b411ff745ff8
+    $no = 1;
+// Melakukan perulangan (while) selama masih ada baris data dalam hasil query ($result).
+// while adalah  mengulang kode selama suatu kondisi bernilai true (benar).
     while ($row = mysqli_fetch_assoc($result)) {
+      // menampilkan data dari database ke dalam tabel HTML
       echo "<tr>
               <td>{$no}</td>
               <td>{$row['nama']}</td>
               <td>{$row['layanan']}</td>
               <td>{$row['waktu']}</td>
             </tr>";
+// operator increment.
+// Artinya: tambahkan 1 ke nilai $no setelah baris ini dijalankan.
       $no++;
     }
     ?>
   </table>
+<<<<<<< HEAD
+=======
+
+>>>>>>> ed0c355d6852244f1b215bb0dcc4b411ff745ff8
 
   <div class="logout-link ">
     <a href="logout.php">Logout</a>
   </div>
+<<<<<<< HEAD
+=======
+
+
+>>>>>>> ed0c355d6852244f1b215bb0dcc4b411ff745ff8
 </body>
 </html>

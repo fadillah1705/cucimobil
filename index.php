@@ -1,9 +1,14 @@
 <?php
+// PHP menggunakan session untuk menyimpan data yang tetap tersimpan antar halaman, misalnya data login pengguna.
+// Tanpa session_start();, kamu tidak bisa menggunakan atau menyimpan $_SESSION.
 session_start();
 
-// Jika belum login, tetapkan sebagai tamu
+// isset() memeriksa apakah variabel $_SESSION['username'] sudah ada atau belum.
+// !isset(...) berarti: "Jika username belum disetel di sesi" — alias user belum login.
 if (!isset($_SESSION['username'])) {
+// Kalau belum login, maka kita tetapkan username default menjadi "Tamu".
   $_SESSION['username'] = 'Tamu';
+// Kita juga tetapkan role menjadi 'guest',terkantung yg mreka pilih antar admin,user
   $_SESSION['role'] = 'guest';
 }
 
@@ -47,9 +52,10 @@ if (!isset($_SESSION['username'])) {
           <a class="nav-link active" href="kontak.php">Kontak</a>
         </li>
        
- <!-- profile -->
+<!-- profile -->
+<!-- Mengecek apakah sesi username sudah ada (user sudah login). -->
 <?php if (isset($_SESSION['username']) && $_SESSION['role'] !== 'guest'): ?>
-  <!-- ✅ User login sebagai user/admin -->
+ <!--  tampilkan dropdown Profil + Logout.-->
   <li class="nav-item dropdown">
     <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
       <i class="bi bi-person-circle"></i> Profil
@@ -60,24 +66,25 @@ if (!isset($_SESSION['username'])) {
       <li><a class="dropdown-item" href="logout.php">Logout</a></li>
     </ul>
   </li>
+
 <?php else: ?>
-  <!-- ❌ User belum login atau tamu -->
+<!-- User belum login -->
+<!-- tampilkan tombol login -->
   <li class="nav-item">
     <a class="nav-link" href="login.php">
       <i class="bi bi-box-arrow-in-right"></i> Login
     </a>
   </li>
+
 <?php endif; ?>
-
-
 
       </ul>
     </div>
   </div>
 </nav>
 
-  <section class="hero d-flex align-items-center" style="padding-top: 100px; " id="home">
-    <div class="container ">
+<section class="hero d-flex align-items-center" style="padding-top: 100px; " id="home">
+   <div class="container ">
       <div class="row align-items-center">
 
         <div class="col-md-6">

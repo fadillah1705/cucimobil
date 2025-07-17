@@ -6,7 +6,7 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] === 'guest') {
     header("Location: login.php");
     exit;
 }
-
+// mengambil nama dan juga layanan yang sudah di isi
 $username = $_SESSION['username'];
 $role = $_SESSION['role'] ?? '';
 $layan = $_POST['layanan'] ?? '';
@@ -39,7 +39,7 @@ if (!empty($nama) && !empty($username) && !empty($layan)) {
 
     // Redirect ke WhatsApp
     $text = urlencode("Halo, saya ingin booking layanan $layan. Apakah masih tersedia?");
-    header("Location: https://wa.me/6281353638858?text=$text");
+    header("Location: https://wa.me/6281218352273?text=$text");
     exit;
 } else {
     header("Location: harga.php");
