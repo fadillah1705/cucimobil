@@ -9,26 +9,42 @@ include 'conn.php';
 $username = $_SESSION['username'];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $namaLengkap = $_POST['nama_lengkap'];
-    $gender = $_POST['gender'];
-    $foto = $_FILES['foto'];
+    $namaLengkap = $_POST['nama_lengkap'] ?? '';
+    $gender = $_POST['gender'] ?? '';
+    $newUsername = $_POST['username'] ?? $oldUsername;
+    $foto = $_FILES['foto'] ?? null;
+
     $fotoName = null;
 
-    if ($foto['error'] === UPLOAD_ERR_OK) {
+     // Proses upload foto jika ada
+    if ($foto && $foto['error'] === UPLOAD_ERR_OK) {
         $ext = pathinfo($foto['name'], PATHINFO_EXTENSION);
-        $fotoName = $username . "_" . time() . "." . $ext;
+        $fotoName = $newUsername . "_" . time() . "." . $ext;
         move_uploaded_file($foto['tmp_name'], "uploads/$fotoName");
+}
+ // Bangun SQL sesuai kondisi
+    $sql = "UPDATE users SET nama_lengkap = ?, gender = ?, username = ?" . 
+           (!empty($fotoName) ? ", foto = ?" : "") . 
+           " WHERE username = ?";
 
-        // SQL jika ada foto
-        $stmt = $conn->prepare("UPDATE mencuci SET nama_lengkap = ?, gender = ?, foto = ? WHERE username = ?");
-        $stmt->bind_param("ssss", $namaLengkap, $gender, $fotoName, $username);
-    } else {
-        // SQL jika tidak ada foto
-        $stmt = $conn->prepare("UPDATE mencuci SET nama_lengkap = ?, gender = ? WHERE username = ?");
-        $stmt->bind_param("sss", $namaLengkap, $gender, $username);
-    }
+    // Bangun parameter binding
+    $types = "sss"; // nama_lengkap, gender, username
+    $params = [$namaLengkap, $gender, $newUsername];
+ if (!empty($fotoName)) {
+        $types .= "s";
+        $params[] = $fotoName;
+ }
 
+  $types .= "s"; // old username
+    $params[] = $oldUsername;
+
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param($types, ...$params);
     $stmt->execute();
+    $stmt->close();
+
+    $_SESSION['username'] = $newUsername;
+
     header("Location: profil.php");
     exit;
 }
