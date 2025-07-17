@@ -11,7 +11,7 @@ $namaLengkap = '';
 $gender = '';
 
 // AMBIL DATA DARI DATABASE (supaya muncul di form)
-$stmt = $conn->prepare("SELECT nama_lengkap, gender FROM users WHERE username = ?");
+$stmt = $conn->prepare("SELECT nama_lengkap, gender FROM mencuci WHERE username = ?");
 $stmt->bind_param("s", $oldUsername);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // Bangun SQL sesuai kondisi
-    $sql = "UPDATE users SET nama_lengkap = ?, gender = ?, username = ?" . 
+    $sql = "UPDATE mencuci SET nama_lengkap = ?, gender = ?, username = ?" . 
            (!empty($fotoName) ? ", foto = ?" : "") . 
            " WHERE username = ?";
 
@@ -54,11 +54,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $types .= "s"; // old username
     $params[] = $oldUsername;
 
+    // Eksekusi query
     $stmt = $conn->prepare($sql);
     $stmt->bind_param($types, ...$params);
     $stmt->execute();
     $stmt->close();
 
+    // Update session username jika berhasil
     $_SESSION['username'] = $newUsername;
 
     header("Location: profil.php");
@@ -183,9 +185,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
       <div class="d-grid gap-2">
-        <a href="pw.php" class="btn">Ubah Password</a>
+
+         <a href="pw.php" class="btn">Ubah Password</a>
         <a href="profil.php" class="btn">Batal</a>
-        <button type="submit" class="btn">Simpan</button>
+       <button type="submit" class="btn">Simpan</button>
       </div>
     </form>
   </div>

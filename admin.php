@@ -1,10 +1,12 @@
 <?php
 
+
 include 'conn.php';
 // Memulai sesi PHP
 session_start();
 if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'Admin') {
   // Pengguna akan dialihkan ke halaman login
+  
   header("Location: login.php");
   exit;
 }
@@ -40,14 +42,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Admin Booking</title>
+  <title>Admin - Data Booking</title>
   <style>
-    table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-    th, td { border: 1px solid #ddd; padding: 10px; text-align: center; }
-    th { background-color: #f4f4f4; }
+
+
+    h2 {
+    text-align: center;
+    color: rgb(58, 159, 167);
+    font-weight: bold;
+    margin-bottom: 30px;
+  }
+
+  /* Tabel */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
+    
+  }
+
+  th, td {
+    padding: 14px 16px;
+    text-align: center;
+    border-bottom: 1px solid #e0e0e0;
+    font-size: 15px;
+  }
+
+  th {
+    background-color: rgb(58, 159, 167);
+    color: white;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  tr:hover {
+    background-color: #f1f1f1;
+    transition: background-color 0.3s ease;
+  }
+
+  /* Tombol Logout */
+  .logout-link {
+    display: inline-block;
+    margin-top: 25px;
+    background-color: rgb(58, 159, 167);
+    color: white;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 500;
+    transition: background-color 0.3s ease;
+  }
+
+  .logout-link:hover {
+    background-color: rgb(45, 134, 140);
+  }
   </style>
 </head>
 <body>
+
   <h2>Data Booking Pelanggan</h2>
 
   <table>
@@ -61,19 +117,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php
 $result = mysqli_query($conn, "SELECT * FROM activity ORDER BY waktu ASC")
           or die("Query Error: " . mysqli_error($conn));
+
+    
+
+ <?php
+
+// Query: Ambil semua data dari tabel booking, diurutkan berdasarkan waktu dari terbaru ke terlama (DESC)
+$query = "SELECT * FROM booking ORDER BY waktu DESC";
+$result = mysqli_query($conn, $query) or die("Query Error: " . mysqli_error($conn));
+
+// kamu memberikan nilai awal 1..
+
     $no = 1;
-    // Memulai perulangan untuk mengambil baris demi baris dari hasil query ke database.
-    // Setiap baris disimpan ke $row, dan bisa diakses dengan nama kolom seperti $row['nama'].
-   // Perulangan akan berhenti otomatis saat data habis.
+// Melakukan perulangan (while) selama masih ada baris data dalam hasil query ($result).
+// while adalah  mengulang kode selama suatu kondisi bernilai true (benar).
     while ($row = mysqli_fetch_assoc($result)) {
-      // mengambil data dari database,sesuai yg di isi pengguna di tabel booking
+      // menampilkan data dari database ke dalam tabel HTML
       echo "<tr>
               <td>{$no}</td>
               <td>{$row['nama']}</td>
               <td>{$row['layanan']}</td>
               <td>{$row['waktu']}</td>
             </tr>";
-      // Menambahkan nilai $no sebanyak 1 untuk baris berikutnya.
+// operator increment.
+// Artinya: tambahkan 1 ke nilai $no setelah baris ini dijalankan.
       $no++;
     }
 
@@ -177,6 +244,7 @@ while ($row = mysqli_fetch_assoc($result)) {
     }
     ?>
   </table>
+
   <div id="eventPopup" style="display:none; position:fixed; top:20%; left:30%; background:#fff; border:1px solid #ccc; padding:20px; z-index:1000;">
   <h3>Detail Booking</h3>
   <p id="popupContent"></p>
@@ -272,7 +340,12 @@ function closePopup() {
 </body>
 </html>
 
-      <li><a class="dropdown-item" href="logout.php">Logout</a></li>
+      <li><a class="dropdown-item" href="logout.php">Logout</a></li
+
+
+  <div class="logout-link ">
+    <a href="logout.php">Logout</a>
+  </div>
 
 </body>
 </html>
