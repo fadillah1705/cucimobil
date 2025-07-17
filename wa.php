@@ -39,7 +39,7 @@ if (!empty($nama) && !empty($username) && !empty($layan)) {
 
     // Redirect ke WhatsApp
     $text = urlencode("Halo, saya ingin booking layanan $layan. Apakah masih tersedia?");
-    header("Location: https://wa.me/6281353638858?text=$text");
+    header("Location: https://wa.me/6281218352273?text=$text");
     exit;
 } else {
     header("Location: harga.php");
