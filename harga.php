@@ -39,7 +39,7 @@ session_start();
           <a class="nav-link active" href="kontak.php">Kontak</a>
         </li>
 
-         <!-- profile -->
+ <!-- profile -->
 <!-- Mengecek apakah sesi username sudah ada (user sudah login). -->
   <?php if (isset($_SESSION['username'])): ?>
   <!--  tampilkan dropdown Profil + Logout.-->
@@ -53,15 +53,17 @@ session_start();
       <li><a class="dropdown-item" href="logout.php">Logout</a></li>
     </ul>
   </li>
+
 <?php else: ?>
-  <!-- ❌ User belum login -->
-   <!-- tampilkan tombol login -->
+<!-- User belum login -->
+  <!-- tampilkan tombol login -->
   <li class="nav-item">
     <a class="nav-link" href="login.php">
       <i class="bi bi-box-arrow-in-right"></i> Login
     </a>
   </li>
 <?php endif; ?>
+
       </ul>
     </div>
   </div>
@@ -70,8 +72,8 @@ session_start();
    <section class="my-5 pt-5">
   <div class="container text-center">
    <h3>
-            <span class="badge fw-bold text-white p-3 mb-3" style="background-color: #3a9fa7;">Harga Layanan</span>
-          </h3>
+ <span class="badge fw-bold text-white p-3 mb-3" style="background-color: #3a9fa7;">Harga Layanan</span>
+ </h3>
     <div class="row justify-content-center g-4 mb-4">
       <div class="col-md-4 col-lg-3">
         <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">

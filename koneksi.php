@@ -2,7 +2,7 @@
 $host = "localhost";
 $user = "root";
 $pass = "";
-$db   = "db_cucimobil";
+$db   = "cucimobil";
 
 $conn = mysqli_connect($host, $user, $pass, $db);
 
