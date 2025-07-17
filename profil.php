@@ -220,7 +220,13 @@ a:hover {
 
 <div class="container mt-5">
   <div class="card mx-auto p-4 shadow-sm" style="max-width: 500px;">
-    <h4 class="text-center mb-4">Profil Pengguna</h4>
+   <h4 class="text-center mb-4">
+  <?php
+  // Pastikan session sudah dimulai di atas
+  echo "Haii, " . htmlspecialchars($_SESSION['username']) . "!";
+  ?>
+</h4>
+
 
     <div class="text-center">
 <img src="<?= $fotoProfil ?>" class="profile-img" alt="Foto Profil">

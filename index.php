@@ -56,10 +56,12 @@ if (!isset($_SESSION['username'])) {
 <!-- Mengecek apakah sesi username sudah ada (user sudah login). -->
 <?php if (isset($_SESSION['username']) && $_SESSION['role'] !== 'guest'): ?>
  <!--  tampilkan dropdown Profil + Logout.-->
-  <li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-      <i class="bi bi-person-circle"></i> Profil
-    </a>
+<li class="nav-item dropdown">
+<a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+  <i class="bi bi-person-circle"></i>
+  Haii, <?php echo htmlspecialchars($_SESSION['username']); ?>!
+</a>
+
     <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
       <li><a class="dropdown-item" href="profil.php">Lihat Profil</a></li>
       <li><hr class="dropdown-divider"></li>
