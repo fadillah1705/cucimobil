@@ -1,140 +1,113 @@
 <?php
-// Menghubungkan ke file koneksi database
 include "conn.php";
-
-// Memulai session untuk menyimpan informasi user
 session_start();
-// Variabel untuk menyimpan pesan error (jika ada)
+
 $message = "";
 
-// Jika form login dikirim (POST)
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
-  // Login sebagai TAMU (tidak perlu input)
+  // Login tamu
   if (isset($_POST["login"]) && $_POST["login"] === "guest") {
-    $_SESSION["username"] = "Tamu";   // Simpan username sebagai "Tamu"
-    $_SESSION["role"] = "guest";      // Role juga diset sebagai "guest"
+    $_SESSION["username"] = "Tamu";
+    $_SESSION["role"] = "guest";
     echo "<script>
       alert('Masuk sebagai tamu berhasil!');
-      window.location.href = 'index.php'; // Redirect ke halaman utama
+      window.location.href = 'index.php';
     </script>";
     exit;
   }
 
-  // Login sebagai user/admin (butuh username & password)
-  $username = $_POST["username"] ?? ''; // Ambil username dari input
-  $password = $_POST["password"] ?? ''; // Ambil password dari input
-  $loginType = $_POST["login"] ?? 'user'; // Cek tipe login (user/admin)
+  // Login user/admin
+  $username = $_POST["username"] ?? '';
+  $password = $_POST["password"] ?? '';
+  $loginType = $_POST["login"] ?? 'user'; // default user
 
-  // Ambil data dari database berdasarkan username
   $sql = "SELECT * FROM mencuci WHERE username = ?";
-  $stmt = $conn->prepare($sql);                 // Persiapkan query
-  $stmt->bind_param("s", $username);            // Ikat parameter (string)
-  $stmt->execute();                             // Jalankan query
-  $result = $stmt->get_result();                // Ambil hasilnya
+  $stmt = $conn->prepare($sql);
+  $stmt->bind_param("s", $username);
+  $stmt->execute();
+  $result = $stmt->get_result();
 
   if ($result->num_rows === 1) {
-    $user = $result->fetch_assoc();             // Ambil baris user
+    $user = $result->fetch_assoc();
 
-    // Cek password cocok dengan yang di-hash di database
     if (password_verify($password, $user["password"])) {
       $_SESSION["username"] = $user["username"];
       $_SESSION["role"] = $user["role"];
 
-      // Jika login sebagai admin
       if ($loginType === "admin") {
         if ($user["role"] === "admin") {
           echo "<script>
             alert('Login sebagai admin berhasil!');
-            window.location.href = 'admin.php'; // Arahkan ke halaman admin
+            window.location.href = 'admin.php';
           </script>";
         } else {
           echo "<script>
             alert('Akses ditolak. Bukan akun admin.');
-            window.location.href = 'login.php'; // Kembali ke login
+            window.location.href = 'login.php';
           </script>";
         }
       } else {
-        // Jika login sebagai user biasa
         echo "<script>
           alert('Login berhasil!');
-          window.location.href = 'index.php'; // Redirect ke halaman utama
+          window.location.href = 'index.php';
         </script>";
       }
-      exit(); // Hentikan eksekusi script
+      exit();
     } else {
-      $message = "Password salah."; // Jika password tidak cocok
+      $message = "Password salah.";
     }
   } else {
-    $message = "Username tidak ditemukan."; // Jika username tidak ada
+    $message = "Username tidak ditemukan.";
   }
 
-  $stmt->close(); // Tutup statement
+  $stmt->close();
 }
 ?>
-
-<!-- Bagian HTML -->
 <!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
   <title>Login</title>
-  <!-- Impor Bootstrap dari CDN -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body class="bg-light">
   <div class="container mt-5">
     <div class="row justify-content-center">
       <div class="col-md-6">
-        <!-- Kartu untuk form login -->
         <div class="card shadow p-4">
           <h3 class="text-center mb-4">Login</h3>
 
-          <!-- FORM LOGIN -->
+          <!-- FORM SATU -->
           <form method="POST">
-            <!-- Input Username -->
             <div class="mb-3">
               <label class="form-label">Username</label>
               <input type="text" class="form-control" name="username" required>
             </div>
 
-            <!-- Input Password -->
             <div class="mb-3">
               <label class="form-label">Password</label>
               <input type="password" class="form-control" name="password" required>
             </div>
 
-            <!-- Tombol Login sebagai User -->
-            <button type="submit" name="login" value="user" class="btn btn-success w-100 mb-2">
-              Login User
-            </button>
-
-            <!-- Tombol Login sebagai Admin -->
-            <button type="submit" name="login" value="admin" class="btn btn-primary w-100 mb-2">
-              Login Admin
-            </button>
-
-            <!-- Tombol Login sebagai Tamu -->
-            <button type="submit" name="login" value="guest" class="btn btn-outline-secondary w-100 mb-3">
-              Masuk tanpa akun
-            </button>
+            <button type="submit" name="login" value="user" class="btn btn-success w-100 mb-2">Login User</button>
+            <button type="submit" name="login" value="admin" class="btn btn-primary w-100 mb-2">Login Admin</button>
+            <button type="submit" name="login" value="guest" class="btn btn-outline-secondary w-100 mb-3">Masuk tanpa akun</button>
           </form>
 
-          <!-- Tampilkan Pesan Error Jika Ada -->
+          <!-- Pesan Error -->
           <?php if (!empty($message)): ?>
-            <div class="alert alert-danger text-center">
-              <?= $message ?>
-            </div>
+            <div class="alert alert-danger text-center"><?= $message ?></div>
           <?php endif; ?>
 
-          <!-- Link ke halaman registrasi -->
+          <!-- Link Daftar -->
           <div class="text-center mt-3">
             Belum punya akun? <a href="regis.php">Daftar</a>
           </div>
 
-        </div> <!-- End Card -->
+        </div>
       </div>
     </div>
   </div>
 </body>
-</html>
+</html> 

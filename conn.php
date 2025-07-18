@@ -4,7 +4,7 @@ $user = "root";
 $pass = "";
 $db   = "cucimobil";
 
-new mysqli("localhost", "root", "", "cucimobil", 3308);
+new mysqli("localhost", "root", "", "cucimobil");
 
 
 if ($conn->connect_error) {
