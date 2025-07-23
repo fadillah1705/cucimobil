@@ -1,66 +1,118 @@
 <?php
 session_start();
+// mengecek apakah user sudah login
 if (!isset($_SESSION['username'])) {
+//kalo belum akan di arahkab ke halaman login 
     header("Location: login.php");
     exit;
 }
 include 'conn.php';
 
+// Mengambil username pengguna yang sedang login dari data sesi.
+// Mengambil username dari session dan menyimpannya di $oldUsername.
 $oldUsername = $_SESSION['username'];
+// membuat sebuah variabel bernama $namaLengkap dan $gender dan memberikan nilai awal berupa string kosong ('').
 $namaLengkap = '';
 $gender = '';
 
-// AMBIL DATA DARI DATABASE (supaya muncul di form)
+//  mengambil data nama_lengkap dan gender dari tabel mencuci berdasarkan username.
 $stmt = $conn->prepare("SELECT nama_lengkap, gender FROM mencuci WHERE username = ?");
+// Kamu sedang mengisi tanda tanya ? dalam query SQL dengan nilai dari variabel $oldUsername.
 $stmt->bind_param("s", $oldUsername);
+// Menjalankan perintah SQL yang sudah dipersiapkan
 $stmt->execute();
+// Mengambil hasil dari query yang sudah dieksekusi sebelumnya, dan menyimpannya ke dalam variabel $result.
 $result = $stmt->get_result();
+// Mengecek apakah hasil query dari database berisi data atau tidak.
+// > 0
+// Kita cek: apakah jumlah datanya lebih dari nol?
+// berarti ada data yang ditemukan.
 if ($result->num_rows > 0) {
+// Mengambil satu baris data hasil query dari database, dan menyimpannya dalam bentuk array asosiatif
+// Array asosiatif adalah array yang menggunakan nama (key) untuk mengakses nilainya, bukan angka indeks seperti array biasa.s
     $userData = $result->fetch_assoc();
+// Mengambil data dari array asosiatif di $userData (yang berasal dari database) dan menyimpannya ke dalam variabel biasa ($namaLengkap dan $gender) untuk digunakan lebih mudah di tempat lain.
+// mengambil data dari array $userData, lalu menyimpannya ke dalam dua variabel: $namalengkap dan $ gender
     $namaLengkap = $userData['nama_lengkap'];
     $gender = $userData['gender'];
 }
 $stmt->close();
 
+
+// $_SERVER['REQUEST_METHOD'] adalah variabel superglobal yang menyimpan jenis request HTTP dari browser.
+// === digunakan untuk membandingkan secara identik, memastikan nilainya benar-benar "POST" (string).
+// Mengecek apakah halaman saat ini dipanggil melalui permintaan POST, biasanya saat form disubmit.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+//Mengambil nilai dari input form bernama nama_lengkap dan gender, jika ada, dan kalau tidak ada (belum diisi atau error), maka nilainya jadi string kosong (''). 
     $namaLengkap = $_POST['nama_lengkap'] ?? '';
     $gender = $_POST['gender'] ?? '';
-    $newUsername = $_POST['username'] ?? $oldUsername;
-    $foto = $_FILES['foto'] ?? null;
 
+// kalau tidak ada, pakai username lama ($oldUsername). 
+    $newUsername = $_POST['username'] ?? $oldUsername;
+// mengambil file gambar yang diunggah lewat form, dan menyimpannya ke variabel $foto
+    $foto = $_FILES['foto'] ?? null;
+// Jika file tidak diunggah atau input tidak ada, maka variabel $foto akan bernilai null.
     $fotoName = null;
 
-    // Proses upload foto jika ada
+// Proses upload foto jika ada
+// Baris ini mengecek apakah ada file yang diunggah dan apakah upload-nya berhasil tanpa error.
     if ($foto && $foto['error'] === UPLOAD_ERR_OK) {
+//Mengambil ekstensi file dari nama file yang diupload dan simpan di variabel $ext. CONTOH emsit.jpg, emsit.png
         $ext = pathinfo($foto['name'], PATHINFO_EXTENSION);
+// Membuat nama file foto yang unik berdasarkan:
+// Username baru ($newUsername)
+// Timestamp saat ini (time())
+// Ekstensi file ($ext)
+//Tujuannya : Menghindari nama file kembar jika user upload file dengan nama yang sama (misalnya foto.jpg)
         $fotoName = $newUsername . "_" . time() . "." . $ext;
+// Memindahkan file sementara hasil upload ke folder permanen (uploads/) dengan nama yang sudah ditentukan.
         move_uploaded_file($foto['tmp_name'], "uploads/$fotoName");
     }
 
-    // Bangun SQL sesuai kondisi
+    // Query ini akan mengubah data di tabel mencuci, tepatnya: nama lengkap,gender dan username
     $sql = "UPDATE mencuci SET nama_lengkap = ?, gender = ?, username = ?" . 
+//  !empty($fotoName) :Mengecek apakah variabel $fotoName tidak kosong.
+// Kalau $fotoName tidak kosong, tambahkan , foto = ?
+// Kalau kosong, tidak usah menambahkan apapun (hasilnya "")
            (!empty($fotoName) ? ", foto = ?" : "") . 
+//  Menentukan baris mana yang ingin diupdate berdasarkan username, hanya username saja ynag di ubah MENGGUNAKAN WHERA AGAR YANG LAIN TIDAK IKUT KE UBAH
            " WHERE username = ?";
 
     // Bangun parameter binding
-    $types = "sss"; // nama_lengkap, gender, username
+    //Artinya kamu akan mengirim 3 parameter ke query,masing masing bertipe string 
+    $types = "sss";
     $params = [$namaLengkap, $gender, $newUsername];
 
+    // Untuk menambahkan parameter fotoName ke dalam query SQL jika file foto memang di-upload.
+    // Mengecek apakah variabel $fotoName tidak kosong (berarti ada file yang di-upload).
     if (!empty($fotoName)) {
+      // Menambahkan satu huruf "s" ke variabel $types.,pertama kan cuman 3 sekarang tambah 1 lagi
         $types .= "s";
+ // Menambahkan nilai $fotoName ke akhir array $params.
+//  $params adalah array berisi data yang akan di-bind (ikat) ke query SQL.
         $params[] = $fotoName;
     }
 
+
+    // Menambahkan huruf "s" ke akhir string $types.
+    // .= adalah operator penggabung string
     $types .= "s"; // old username
+    //Menambahkan nilai dari $oldUsername ke akhir array $params. 
     $params[] = $oldUsername;
 
     // Eksekusi query
+    // prepare() digunakan untuk mencegah SQL Injection dan membuat query jadi lebih aman.
+// fungsi untuk menyiapkan perintah SQL sebelum dijalankan. 
     $stmt = $conn->prepare($sql);
+    // Mengikat (bind) nilai-nilai parameter ke query SQL yang sudah disiapkan sebelumnya menggunakan prepare().
+    // Operator ... disebut spread operator. Ini artinya elemen-elemen dalam array $params akan "dipecah satu per satu".
     $stmt->bind_param($types, ...$params);
+    // Menjalankan query SQL 
     $stmt->execute();
     $stmt->close();
 
     // Update session username jika berhasil
+    // Menyimpan username baru ke dalam session
     $_SESSION['username'] = $newUsername;
 
     header("Location: profil.php");

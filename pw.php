@@ -2,24 +2,34 @@
 session_start();
 include 'conn.php';
 
+// Ambil data username dari session, tapi kalau belum ada (belum login atau session belum dibuat), maka isi dengan string kosong ('').
 $username = $_SESSION['username'] ?? '';
 
+//"Kalau halaman ini menerima permintaan dari form (metode POST), dan ada tombol atau data bernama ganti_password yang dikirim, maka jalankan kode di dalam blok if ini."
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ganti_password'])) {
+  // Mengambil nilai password lama dan baru dari input form:
     $password_lama = $_POST['password_lama'];
     $password_baru = $_POST['password_baru'];
 
-    // Ambil password saat ini dari DB
+ // Membuat prepared statement untuk mengambil password dari tabel mencuci, berdasarkan username yang dicari.
     $stmt = $conn->prepare("SELECT password FROM mencuci WHERE username = ?");
+    // Mengisi placeholder ? di query SQL dengan nilai dari variabel $username, dan menyatakan bahwa nilai itu bertipe string ("s").
+    // Placeholder dalam pemrograman (terutama SQL) adalah simbol pengganti sementara yang digunakan untuk menandai bagian yang akan diisi nanti dengan data sebenarnya.
     $stmt->bind_param("s", $username);
     $stmt->execute();
+    // Baris ini mengikat hasil dari query SQL ke variabel $password_hash_db.
     $stmt->bind_result($password_hash_db);
+    // Digunakan untuk mengambil hasil dari query SQL yang sudah di-bind ke variabel dengan bind_result().
     $stmt->fetch();
     $stmt->close();
 
+    // Digunakan untuk memverifikasi apakah password yang dimasukkan oleh user ($password_lama) cocok dengan hash password yang tersimpan di database ($password_hash_db).
     if (password_verify($password_lama, $password_hash_db)) {
-        // Password lama cocok, update
+        // Ini digunakan untuk mengenkripsi (hash) password baru sebelum disimpan ke database.
         $hashed_baru = password_hash($password_baru, PASSWORD_DEFAULT);
+        // Kode ini menyiapkan query SQL untuk mengubah (update) password seorang pengguna dalam tabel mencuci.
         $stmt = $conn->prepare("UPDATE mencuci SET password = ? WHERE username = ?");
+        // Bagian ini mengikat (bind) dua nilai ke placeholder (?) di query SQL yang sudah disiapkan sebelumnya. Tujuannya agar data bisa diproses dengan aman dan benar saat query dieksekusi.
         $stmt->bind_param("ss", $hashed_baru, $username);
         $stmt->execute();
         $stmt->close();

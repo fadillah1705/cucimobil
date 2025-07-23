@@ -1,13 +1,19 @@
 <?php
 include "conn.php";
 
+// Membuat (atau mereset) variabel $message dengan nilai kosong (string kosong).
 $message = "";
 
+// Kondisi ini akan mengecek apakah halaman saat ini diakses melalui metode POST, biasanya ketika form dikirim.
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+  // Mengambil input dari form bernama username, lalu menghapus spasi di awal dan akhir nilai tersebut.
   $username = trim($_POST['username']);
   $rawPassword = $_POST["password"];
+  //Mengambil nilai dari input form role, jika ada, dan menyimpannya di variabel $inputRole.
+// Kalau tidak ada (misalnya form tidak mengirimkan role), maka nilai default-nya adalah string kosong ('').
   $inputRole = $_POST["role"] ?? '';
 
+  // Cek apakah salah satu dari tiga input berikut kosong:
   if (empty($username) || empty($rawPassword) || empty($inputRole)) {
     $message = "Semua field harus diisi.";
   } else {
@@ -16,24 +22,38 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
 
     // Cek apakah username sudah ada
+    // Kode ini membuat prepared statement untuk mencari apakah username tertentu sudah ada di tabel mencuci.
     $check = $conn->prepare("SELECT id FROM mencuci WHERE username = ?");
+    // Ini mengikat nilai dari variabel $username ke placeholder ? yang ada di query SQL yang sebelumnya disiapkan.
     $check->bind_param("s", $username);
     $check->execute();
+    // store_result() digunakan untuk menyimpan hasil query dari statement yang dieksekusi ke dalam memori lokal, sehingga bisa diakses nanti — misalnya untuk menghitung jumlah baris hasil dengan num_rows.
     $check->store_result();
 
+// Menambahkan data username dan password ke tabel mencuci dengan cara yang aman menggunakan Prepared Statement.
+    // Ini adalah query SQL yang digunakan untuk menambahkan data baru ke dalam tabel mencuci.
   $sql = "INSERT INTO mencuci (username, password) VALUES (?, ? )";
+  // Ini adalah langkah untuk menyiapkan (prepare) perintah SQL sebelum dijalankan, menggunakan Prepared Statement dari MySQLi.
   $stmt = $conn->prepare($sql);
+  // Baris ini mengisi placeholder (?) dalam query dengan nilai yang kamu punya.
+  // $username akan menggantikan tanda ? pertama.
+// $password akan menggantikan tanda ? kedua.
   $stmt->bind_param("ss", $username, $password);
 
 
+  // Ini mengecek apakah data username yang diinputkan sudah ada di
     if ($check->num_rows > 0) {
       $message = "Username sudah digunakan. Silakan pilih yang lain.";
     } else {
-      // Simpan ke database
+      //  menambahkan data pengguna baru ke dalam tabel mencuci.
       $sql = "INSERT INTO mencuci (username, password, role) VALUES (?, ?, ?)";
+      // Kode ini digunakan untuk menyiapkan (prepare) query SQL yang sebelumnya sudah ditulis di variabel $sql, agar bisa dijalankan dengan prepared statement dari MySQLi.
       $stmt = $conn->prepare($sql);
+      // Kode ini berfungsi untuk mengikat data (bind) ke query SQL yang sebelumnya sudah disiapkan dengan prepare().
       $stmt->bind_param("sss", $username, $password, $inputRole);
 
+
+      // cek apakah eksekusinya berhasil atau tidak.
       if ($stmt->execute()) {
         echo "<script>
           alert('Registrasi berhasil!');
