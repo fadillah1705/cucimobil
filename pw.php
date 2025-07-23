@@ -110,9 +110,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ganti_password'])) {
           </div>
         </div>
 
-        <div class="modal-footer border-0 flex-column">
-          <button type="submit" class="btn btn-primary w-100">Simpan</button>
-          <button type="button" class="btn btn-secondary w-100 mt-2" data-bs-dismiss="modal">Batal</button>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Simpan</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" onclick="window.location.href='lengkapi_profil.php'"></a>Batal</button>
+
         </div>
       </form>
     </div>

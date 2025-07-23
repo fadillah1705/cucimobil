@@ -1,205 +1,132 @@
 <?php
 session_start();
+// Koneksi database dan query untuk mendapatkan layanan
+require_once 'conn.php';
+$services = $conn->query("SELECT * FROM services WHERE is_active = 1 ORDER BY price");
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>Harga Layanan</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="style.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <style>
+        .service-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+            margin-bottom: 20px;
+            border: none;
+            background-color: #f8f9fa;
+        }
+        .service-card:hover {
+            transform: translateY(-5px);
+        }
+        .price-tag {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #0d6efd;
+        }
+        .btn-booking {
+            background-color: #3a9fa7;
+            color: white;
+            font-weight: bold;
+            border: none;
+        }
+        .bg-custom-badge {
+            background-color: #3a9fa7;
+        }
+    </style>
 </head>
 <body>
    <nav class="navbar navbar-expand-lg bg-body-tertiary fixed-top shadow-sm">
-  <div class="container-fluid">
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-      aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
+        <div class="container-fluid">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
 
-      <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav ms-auto">
-        <li class="nav-item">
-          <a class="nav-link" href="index.php">Beranda</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="layanan.php">Layanan Kami</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="harga.php">Harga</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="testimoni.php">Testimoni</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link active" href="kontak.php">Kontak</a>
-        </li>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.php">Beranda</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="layanan.php">Layanan Kami</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="harga.php">Harga</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="testimoni.php">Testimoni</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="kontak.php">Kontak</a>
+                    </li>
 
- <!-- profile -->
-<!-- Mengecek apakah sesi username sudah ada (user sudah login). -->
-  <?php if (isset($_SESSION['username'])): ?>
-  <!--  tampilkan dropdown Profil + Logout.-->
-  <li class="nav-item dropdown">
-<a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-  <i class="bi bi-person-circle"></i>
-  Haii, <?php echo htmlspecialchars($_SESSION['username']); ?>!
-</a>
-    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-      <li><a class="dropdown-item" href="profil.php">Lihat Profil</a></li>
-      <li><hr class="dropdown-divider"></li>
-      <li><a class="dropdown-item" href="logout.php">Logout</a></li>
-    </ul>
-  </li>
-
-<?php else: ?>
-<!-- User belum login -->
-  <!-- tampilkan tombol login -->
-  <li class="nav-item">
-    <a class="nav-link" href="login.php">
-      <i class="bi bi-box-arrow-in-right"></i> Login
-    </a>
-  </li>
-<?php endif; ?>
-
-      </ul>
-    </div>
-  </div>
-</nav>
-
-   <section class="my-5 pt-5">
-  <div class="container text-center">
-   <h3>
- <span class="badge fw-bold text-white p-3 mb-3" style="background-color: #3a9fa7;">Harga Layanan</span>
- </h3>
-    <div class="row justify-content-center g-4 mb-4">
-      <div class="col-md-4 col-lg-3">
-        <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">
-          <div class="card-body">
-            <h5 class="card-title fw-bold">Cuci Interior</h5>
-            <p class="mb-1">Pembersihan dashboard, jok, dan karpet</p>
-            <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
-            <p class="text-muted mt-3">Harga sekali cuci</p>
-            <h5 class="fw-bold">Rp30.000</h5>
-           <form action="wa.php" method="POST">
-  <input type="hidden" name="layanan" value="Cuci Interior">
-  <button type="submit" class="btn btn-primary">Booking</button>
-</form>
-
-          </div>
+                    <!-- profile -->
+                    <?php if (isset($_SESSION['username'])): ?>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-circle"></i>
+                            Haii, <?php echo htmlspecialchars($_SESSION['username']); ?>!
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+                            <li><a class="dropdown-item" href="profil.php">Lihat Profil</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="logout.php">Logout</a></li>
+                        </ul>
+                    </li>
+                    <?php else: ?>
+                    <li class="nav-item">
+                        <a class="nav-link" href="login.php">
+                            <i class="bi bi-box-arrow-in-right"></i> Login
+                        </a>
+                    </li>
+                    <?php endif; ?>
+                </ul>
+            </div>
         </div>
-      </div>
-<div class="col-md-4 col-lg-3">
-  <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">
-    <div class="card-body">
-      <h5 class="card-title fw-bold">Cuci Interior</h5>
-      <p class="mb-1">Pembersihan dashboard, jok, dan karpet</p>
-      <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
-      <p class="text-muted mt-3">Harga sekali cuci</p>
-      <h5 class="fw-bold">Rp30.000</h5>
-    <form action="wa.php" method="POST">
-  <input type="hidden" name="layanan" value="Cuci Interior">
-  <button type="submit" class="btn btn-primary">Booking</button>
-</form>
-    </div>
-  </div>
-</div>
+    </nav>
 
-      <div class="col-md-4 col-lg-3">
-        <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">
-          <div class="card-body">
-            <h5 class="card-title fw-bold">Cuci Mobil Eksterior</h5>
-            <p class="mb-1">Pembersihan bagian luar kendaraan</p>
-            <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
-            <p class="text-muted mt-3">Harga sekali cuci</p>
-            <h5 class="fw-bold">Rp45.000</h5>
-
-           <form action="wa.php" method="POST">
-  <input type="hidden" name="layanan" value="Cuci Mobil Exterior">
-  <button type="submit" class="btn btn-primary">Booking</button>
-</form>
-
-          
-
-          </div>
+    <section class="my-5 pt-5">
+        <div class="container text-center">
+            <h3>
+                <span class="badge fw-bold text-white p-3 mb-3 bg-custom-badge">Harga Layanan</span>
+            </h3>
+            
+            <div class="row justify-content-center g-4">
+                <?php
+                // Koneksi database dan query untuk mendapatkan layanan
+                require_once 'conn.php';
+                $services = $conn->query("SELECT * FROM services WHERE is_active = 1 ORDER BY price");
+                
+                foreach ($services as $service): ?>
+                <div class="col-md-4 col-lg-3">
+                    <div class="card service-card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title fw-bold"><?= htmlspecialchars($service['name']) ?></h5>
+                            <p class="mb-1"><?= nl2br(htmlspecialchars($service['description'])) ?></p>
+                            <p class="text-muted">Menggunakan <?= htmlspecialchars($service['product_used']) ?></p>
+                            
+                            <p class="text-muted mt-3">Harga sekali cuci</p>
+                            <h5 class="fw-bold">Rp<?= number_format($service['price'], 0, ',', '.') ?></h5>
+                            
+                            <form action="wa.php" method="POST">
+                                <input type="hidden" name="layanan" value="<?= htmlspecialchars($service['name']) ?>">
+                                <button type="submit" class="btn btn-booking mt-2">Booking</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
         </div>
-      </div>
-
-      <div class="col-md-4 col-lg-3 ">
-        <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">
-          <div class="card-body">
-            <h5 class="card-title fw-bold">Detailing Mobil</h5>
-            <p class="mb-1">Perawatan menyeluruh eksterior & interior</p>
-            <p class="mb-1">Menggunakan Meguiar’s Gold Class</p>
-            <p class="text-muted mt-3">Harga sekali cuci</p>
-            <h5 class="fw-bold">Rp65.000</h5>
-
-           <form action="wa.php" method="POST">
-  <input type="hidden" name="layanan" value="Detailing">
-  <button type="submit" class="btn btn-primary">Booking</button>
-</form>
-
-
-          </div>
-        </div>
-      </div>
-    </div>
-
-   
-    <div class="row justify-content-center g-4 ">
-      <div class="col-md-4 col-lg-3">
-        <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">
-          <div class="card-body">
-            <h5 class="card-title fw-bold">Cuci Mobil Biasa</h5>
-            <p class="mb-1">Pembersihan luar mobil dengan sabun khusus</p>
-            <p class="mb-1">Menggunakan Meguiar’s Hyper Wash</p>
-            <p class="text-muted mt-3">Harga sekali cuci</p>
-            <h5 class="fw-bold">Rp40.000</h5>
-
-            <form action="wa.php" method="POST">
-  <input type="hidden" name="layanan" value="Cuci Biasa">
-  <button type="submit" class="btn btn-primary">Booking</button>
-</form>
-
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-4 col-lg-3">
-        <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">
-          <div class="card-body">
-            <h5 class="card-title fw-bold">Salon Mobil Kaca</h5>
-            <p class="mb-1">Pembersihan dan pemolesan kaca mobil menyeluruh</p>
-            <p class="mb-1">Menggunakan Meguiar’s Hyper Wash</p>
-            <p class="text-muted mt-3">Harga sekali Cuci</p>
-            <h5 class="fw-bold">Rp1.500.000</h5>
-
-            <form action="wa.php" method="POST">
-  <input type="hidden" name="layanan" value="Salon Mobil Kaca">
-  <button type="submit" class="btn btn-primary">Booking</button>
-</form>
-
-          </div>
-        </div>
-      </div>
-
-      <div class="col-md-4 col-lg-3">
-        <div class="card bg-custom-blue shadow-sm rounded-4 h-100 border-0 bg-light">
-          <div class="card-body">
-            <h5 class="card-title fw-bold">Perbaiki Mobil</h5>
-            <p class="mb-1">Pemeriksaan dan servis mesin mobil</p>
-            <p class="mb-1">Menggunakan alat & formula profesional</p>
-            <p class="text-muted mt-3">Harga sekali layanan</p>
-            <h5 class="fw-bold">Rp50.000</h5>
-
-            <form action="wa.php" method="POST">
-  <input type="hidden" name="layanan" value="Perbaikan">
-  <button type="submit" class="btn btn-primary">Booking</button>
-</form>
-
+    </section>
           </div>
         </div>
       </div>

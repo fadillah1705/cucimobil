@@ -1,651 +1,419 @@
 <?php
-session_start();
-include 'conn.php';
-
-
-// ➜ Mengecek apakah user yang login bukan admin
-// "Kalau user belum login, atau sudah login tapi bukan admin, maka :
-// !isset($_SESSION['username'])	: Apakah user belum login? OR II
-// $_SESSION['role'] !== 'admin'	Apakah user bukan admin (misalnya dia cuma user biasa)?
-// ika salah satu kondisi benar (belum login atau bukan admin), maka:
-if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
-  // maka akan di arahkan ke halaman login
-  header("Location: login.php");
-  exit;
-}
-
-
-// bagian awal dari proses menangkap data dari form yang dikirim menggunakan metode POST.
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
-  // pengambilan data dari form HTML yang dikirim menggunakan metode POST
-    $nama = $_POST['nama_pelanggan'];
-    $layanan = $_POST['nama_layanan'];
-    $jam = $_POST['jam_layanan'];
+// ✅ Tangani form booking dari AJAX
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama'], $_POST['layanan'], $_POST['tanggal'], $_POST['waktu'])) {
+    include 'conn.php';
+    $nama = $_POST['nama'];
+    $layanan = $_POST['layanan'];
     $tanggal = $_POST['tanggal'];
+    $waktu = $_POST['waktu'];
 
-    // Untuk menambahkan data booking ke dalam tabel emsit_cucimobil di database.
-    $sql = "INSERT INTO emsit_cucimobil (nama_pelanggan, nama_layanan, jam_layanan, tanggal)
-            VALUES ('$nama', '$layanan', '$jam', '$tanggal')";
+    // Simpan ke tabel booking
+    $stmt = $conn->prepare("INSERT INTO booking (nama, layanan, tanggal, waktu) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("ssss", $nama, $layanan, $tanggal, $waktu);
 
-// berfungsi untuk memberitahu browser atau client bahwa konten yang dikirim dari server adalah dalam format JSON (JavaScript Object Notation).
-    header('Content-Type: application/json'); 
-
-    // Untuk menjalankan perintah SQL yang ada di variabel $sql ke database menggunakan koneksi $conn, dan memeriksa apakah perintah tersebut berhasil dijalankan.
-    if (mysqli_query($conn, $sql)) {
-        echo json_encode(["status" => "sukses"]);
+    if ($stmt->execute()) {
+        echo json_encode(['status' => 'sukses']);
     } else {
-        echo json_encode(["status" => "gagal", "error" => mysqli_error($conn)]);
+        echo json_encode(['status' => 'gagal', 'error' => $stmt->error]);
     }
-
-    exit; // stop script agar tidak lanjut ke echo <tr> dan lainnya
+    exit;
 }
 
-// Ambil daftar layanan dari database
-$layananOptions = [];
-$layananQuery = mysqli_query($conn, "SELECT nama_layanan FROM layanan");
-while ($layananRow = mysqli_fetch_assoc($layananQuery)) {
-    $layananOptions[] = $layananRow['nama_layanan'];
-}
+// ✅ Lanjutkan ke dashboard admin
+session_start();
+include "conn.php";
 
-// Ambil daftar nama pelanggan dari tabel booking
-// DISTINCT artinya: ambil hanya nilai nama yang berbeda, jadi jika Emsit Patyradja muncul 3x di tabel, maka tetap cuma akan diambil 1 kali saja di dropdown.
-$pelangganOptions = [];
-$pelangganQuery = mysqli_query($conn, "SELECT DISTINCT nama FROM booking ORDER BY nama ASC");
-while ($pelangganRow = mysqli_fetch_assoc($pelangganQuery)) {
-    $pelangganOptions[] = $pelangganRow['nama'];
+// Cek session login
+if (!isset($_SESSION['username'])) {
+    header("Location: login.php");
+    exit;
 }
 
 
+ $query = "SELECT COUNT(*) AS total_booking FROM booking";
+ $result = $conn->query($query);
+ $data = $result->fetch_assoc();
+ $totalBooking = $data['total_booking'];
 
-?>
+ // Ambil jumlah total user
+ $userQuery = "SELECT COUNT(*) AS total_user FROM mencuci where role='user'";
+ $userResult = $conn->query($userQuery);
+ $userData = $userResult->fetch_assoc();
+ $totalUser = $userData['total_user'];
 
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <title>Admin - Data Booking</title>
-  <style>
+// Ambil jumlah layanan dari tabel layanan
+$layananQuery = "SELECT COUNT(*) AS total_layanan FROM layanan";
+$layananResult = $conn->query($layananQuery);
+$layananData = $layananResult->fetch_assoc();
+$totalLayanan = $layananData['total_layanan'];
 
-
-    h2 {
-    text-align: center;
-    color: rgb(58, 159, 167);
-    font-weight: bold;
-    margin-bottom: 30px;
-  }
-
-  /* Tabel */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-    background-color: #ffffff;
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05);
-    
-  }
-
-  th, td {
-    padding: 14px 16px;
-    text-align: center;
-    border-bottom: 1px solid #e0e0e0;
-    font-size: 15px;
-  }
-
-  th {
-    background-color: rgb(58, 159, 167);
-    color: white;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-  }
-
-  tr:hover {
-    background-color: #f1f1f1;
-    transition: background-color 0.3s ease;
-  }
-
-  /* Tombol Logout */
-  .logout-link {
-    display: inline-block;
-    margin-top: 25px;
-    background-color: rgb(58, 159, 167);
-    color: white;
-    padding: 10px 20px;
-    text-decoration: none;
-    border-radius: 8px;
-    font-weight: 500;
-    transition: background-color 0.3s ease;
-  }
-
-  .logout-link:hover {
-    background-color: rgb(45, 134, 140);
-  }
-  </style>
-</head>
+// Menampilkan jumlah booking hari ini (tanggal = CURDATE() di SQL).
+$todayQuery = "SELECT COUNT(*) AS booking_hari_ini FROM booking WHERE tanggal = CURDATE()";
+$todayResult = $conn->query($todayQuery);
+$todayData = $todayResult->fetch_assoc();
+$bookingHariIni = $todayData['booking_hari_ini'];
 
 
-<body>
 
-  <h2>Data Booking Pelanggan</h2>
+// TABEL KALENDER
+// Ambil daftar nama user (pelanggan) dari tabel mencuci
+$namaQuery = "SELECT DISTINCT nama FROM booking ORDER BY nama ASC";
+$namaResult = $conn->query($namaQuery);
+$daftarNama = [];
+while ($row = $namaResult->fetch_assoc()) {
+    $daftarNama[] = $row['nama'];
+}
 
-  <table>
-    <tr>
-      <th>No</th>
-      <th>Nama</th>
-      <th>Layanan</th>
-      <th>Waktu</th>
-    </tr>
-
-
-    <!-- UNTUK DATA BOOKING PELANGGAN 1 -->
- <?php
-
-// Query: Ambil semua data dari tabel booking, diurutkan berdasarkan waktu dari terbaru ke terlama (DESC)
-$query = "SELECT * FROM booking ORDER BY waktu DESC";
-$result = mysqli_query($conn, $query) or die("Query Error: " . mysqli_error($conn));
-
-// kamu memberikan nilai awal 1..
-    $no = 1;
-// Melakukan perulangan (while) selama masih ada baris data dalam hasil query ($result).
-// while adalah  mengulang kode selama suatu kondisi bernilai true (benar).
-    while ($row = mysqli_fetch_assoc($result)) {
-      // menampilkan data dari database ke dalam tabel HTML
-      echo "<tr>
-              <td>{$no}</td>
-              <td>{$row['nama']}</td>
-              <td>{$row['layanan']}</td>
-              <td>{$row['waktu']}</td>
-            </tr>";
-// operator increment.
-// Artinya: tambahkan 1 ke nilai $no setelah baris ini dijalankan.
-      $no++;
-    }
-
-    ?>
-  
-  </table>
+// Ambil daftar nama layanan dari tabel layanan
+$layananQuery = "SELECT nama FROM layanan ORDER BY nama ASC";
+$layananResult = $conn->query($layananQuery);
+$daftarLayanan = [];
+while ($row = $layananResult->fetch_assoc()) {
+    $daftarLayanan[] = $row['nama'];
+}
 
 
-   <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Kalender Booking</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ ?>
+
+
+
+ <!DOCTYPE html>
+ <html lang="en">
+ <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin | Dashboard 2</title>
+
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+  <link rel="stylesheet" href="AdminLTE-3.1.0/plugins/fontawesome-free/css/all.min.css">
+  <link rel="stylesheet" href="AdminLTE-3.1.0/plugins/overlayScrollbars/css/OverlayScrollbars.min.css">
+  <link rel="stylesheet" href="AdminLTE-3.1.0/dist/css/adminlte.min.css">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
   <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
   <style>
-    /* Kalender */
-#calendar {
-  max-width: 900px;
-  margin: 40px auto;
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-/* Modal Booking */
-#bookingModal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: #ffffff;
-  border-radius: 12px;
-  padding: 25px 30px;
-  z-index: 1000;
-  display: none;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  width: 90%;
-  max-width: 400px;
-}
-
-/* Overlay */
-#overlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 999;
-  display: none;
-}
-
-/* Form Input */
-#bookingModal input,
-#bookingModal select {
-  width: 100%;
-  padding: 10px 12px;
-  margin-bottom: 15px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 14px;
-  box-sizing: border-box;
-}
-
-/* Tombol Submit */
-#bookingModal button[type="submit"] {
-  background-color: #007bff;
-  color: white;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  width: 100%;
-  font-weight: bold;
-  transition: background-color 0.3s;
-}
-
-#bookingModal button[type="submit"]:hover {
-  background-color: #0056b3;
-}
-
-/* Popup Event Detail */
-#eventPopup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: white;
-  padding: 20px 25px;
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  z-index: 1001;
-  display: none;
-  max-width: 400px;
-}
-
-#popupOverlay {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.6);
-  z-index: 1000;
-  display: none;
-}
-
-/* tombol batal */
-#bookingModal button[type="button"] {
-  background-color: #dc3545; /* merah lembut */
-  color: white;
-  padding: 10px 16px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  width: 100%;
-  font-weight: bold;
-  margin-top: 10px;
-  transition: background-color 0.3s;
-}
-
-#bookingModal button[type="button"]:hover {
-  background-color: #b52a38; /* lebih gelap saat hover */
-}
-
-/* Responsive Fix */
-@media (max-width: 600px) {
-  #bookingModal, #eventPopup {
-    width: 90%;
+  /* Tinggi tetap untuk kalender */
+  #calendar {
+    height: 900px;
+    overflow: hidden;
   }
-}
+   
+  /* Set tinggi semua baris tanggal menjadi 120px */
+  .fc-daygrid-day-frame {
+    height: 120px !important;
+    min-height: 120px !important;
+  }
+   
+  /* Area events dengan scroll */
+  .fc-daygrid-day-events {
+    overflow-y: auto;
+    max-height: calc(120px - 30px); /* 30px untuk header tanggal */
+    margin-right: 2px;
+  }
+   
+  /* Header tanggal */
+  .fc-daygrid-day-top {
+    height: 30px;
+  }
+   
+  /* Event item styling */
+  .fc-event {
+    font-size: 12px;
+    padding: 2px 4px;
+    margin-bottom: 2px;
+    white-space: normal;
+    word-break: break-word;
+  }
+   
+  /* Warna layanan premium */
+  .fc-event-premium {
+    background-color: #ff9500;
+    border-color: #e08600;
+  }
+   
+  /* Warna layanan reguler */
+  .fc-event-reguler {
+    background-color: #4a90e2;
+    border-color: #3a7bc8;
+  }
+   
+  /* Hilangkan padding yang tidak perlu */
+  .fc-daygrid-day {
+    padding: 0 !important;
+  }
+   
+  /* Pastikan sel tanggal memiliki tinggi yang konsisten */
+  .fc-daygrid-day {
+    height: 120px !important;
+  }
+ </style>
 
-/* detail booking */
-#eventPopup {
-  display: none;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background: #ffffff;
-  border: 1px solid #ccc;
-  border-radius: 12px;
-  padding: 24px;
-  z-index: 1000;
-  width: 380px;
-  max-width: 90%;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  font-family: 'Segoe UI', sans-serif;
-  text-align: center;
-}
+ </head>
+ <body class="hold-transition dark-mode sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed">
+ <div class="wrapper">
 
-#eventPopup h3 {
-  margin-top: 0;
-  color: #333;
-  font-size: 1.5rem;
-}
+  <div class="preloader flex-column justify-content-center align-items-center">
+    <img class="animation__wobble" src="AdminLTE-3.1.0/dist/img/AdminLTELogo.png" alt="AdminLTELogo" height="60" width="60">
+  </div>
 
-#popupContent {
-  margin: 16px 0;
-  color: #555;
-  font-size: 1.1rem;
-  white-space: pre-line; /* agar bisa enter dari \n */
-}
+      <aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <a href="index3.html" class="brand-link">
+      <img src="AdminLTE-3.1.0/dist/img/AdminLTELogo.png" alt="AdminLTE Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+      <span class="brand-text font-weight-light">AdminLTE 3</span>
+    </a>
 
-#eventPopup button {
-  background-color: #007bff;
-  color: #ffffff;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 18px;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
-}
+    <div class="sidebar">
+      <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+        <div class="image">
+          <img src="AdminLTE-3.1.0/dist/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
+        </div>
+          <div class="info">
+  <a href="#" class="d-block"><?= htmlspecialchars($_SESSION['username']) ?></a>
+ </div>
+      </div>
 
-#eventPopup button:hover {
-  background-color: #0056b3;
-}
+      <div class="form-inline">
+        <div class="input-group" data-widget="sidebar-search">
+          <input class="form-control form-control-sidebar" type="search" placeholder="Search" aria-label="Search">
+          <div class="input-group-append">
+            <button class="btn btn-sidebar">
+              <i class="fas fa-search fa-fw"></i>
+            </button>
+          </div>
+        </div>
+      </div>
 
-#popupOverlay {
-  display: none;
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  z-index: 999;
-}
+      <nav class="mt-2">
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+          <li class="nav-item">
+              <li class="nav-item">
+                <a href="admin.php" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Dashboard</p>
+                </a>
+              </li>
+          </li>
+           
+          <li class="nav-item">
+            <a href="AdminLTE-3.1.0/tab_booking.php" class="nav-link">
+              <i class="nav-icon fas fa-th"></i>
+              <p>
+                Widgets
+              </p>
+            </a>
+          </li>
+           
+          <li class="nav-item">
+            <a href="admin-harga.php" class="nav-link">
+              <i class="nav-icon fas fa-chart-pie"></i>
+              <p>
+                Charts
+              </p>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="logout.php" class="nav-link">
+              <i class="nav-icon fas fa-sign-out-alt"></i>
+              <p>Logout</p>
+            </a>
+          </li>   
+        </ul>
+      </nav>
+    </div>
+    </aside>
+  <div class="content-wrapper">
 
-  </style>
-</head>
-
-<body>
-<h1>Kalender Booking Pelanggan</h1>
-<div id='calendar'></div>
-
-<div id="overlay"></div>
-
-<!-- Modal Booking -->
-<div id="bookingModal">
-  <form id="bookingForm">
-    <h3>Booking Layanan</h3>
-    <p id="bookingDateText"></p>
-    <input type="hidden" id="selectedDate">
-
-<label>Nama Pelanggan:</label><br>
-<select id="namaPelanggan" required>
-  <option value="">-- Pilih Nama Pelanggan --</option>
-  <?php foreach ($pelangganOptions as $pelanggan): ?>
-    <option value="<?= htmlspecialchars($pelanggan) ?>"><?= htmlspecialchars($pelanggan) ?></option>
-  <?php endforeach; ?>
-</select><br><br>
-
-
-    <label>Nama Layanan:</label><br>
-<select id="namaLayanan" required>
-  <option value="">-- Pilih Layanan --</option>
-  <?php foreach ($layananOptions as $layanan): ?>
-    <option value="<?= htmlspecialchars($layanan) ?>"><?= htmlspecialchars($layanan) ?></option>
-  <?php endforeach; ?>
-</select><br><br>
-
-
-    <label>Jam Layanan:</label><br>
-    <input type="time" id="jamLayanan" required><br><br>
-
-    <button type="submit">Simpan</button>
-    <button type="button" onclick="closeModal()">Batal</button>
-  </form>
-</div>
-<h1>Tabel Booking Pelanggan</h1>
- <table>
-    <tr>
-      <th>No</th>
-      <th>Nama</th>
-      <th>Layanan</th>
-      <th>Waktu</th>
-    </tr>
-
-    <?php
-// Ambil data booking dari database
-// Membuat sebuah array kosong bernama $events yang nantinya akan digunakan untuk menyimpan kumpulan data, misalnya data booking atau event.
-$events = [];
-// Menjalankan perintah SQL SELECT untuk mengambil semua data (*) dari tabel emsit_cucimobil pada database yang sudah terkoneksi melalui variabel $conn.
-$result = mysqli_query($conn, "SELECT * FROM emsit_cucimobil");
-// Melakukan perulangan untuk mengambil satu per satu baris data dari hasil query $result, sampai tidak ada lagi data yang tersisa.
-while ($row = mysqli_fetch_assoc($result)) {
-  // Menambahkan elemen baru ke dalam array $events. Elemen ini adalah sebuah array asosiatif yang berisi informasi untuk event booking.
-    $events[] = [
-        'title' => $row['nama_layanan'] . ' - ' . $row['jam_layanan'] . ' (' . $row['nama_pelanggan'] . ')',
-        'start' => $row['tanggal']
-    ];
-}
-?>
-
-
-<!-- DATA BOOKING PELANGGAN 2 -->
-    <?php
-// Baris ini berguna untuk mengambil seluruh data booking dari database secara urut berdasarkan tanggal, supaya bisa ditampilkan dengan rapi dan sesuai urutan waktu.
-    $result = mysqli_query($conn, "SELECT * FROM emsit_cucimobil ORDER BY tanggal ASC")
-              or die("Query Error: " . mysqli_error($conn));
-//Variabel ini digunakan untuk menampilkan nomor baris secara berurutan 
-    $no = 1;
-    // while: adalah perulangan yang terus berjalan selama kondisinya benar.
-    // Melakukan perulangan untuk membaca semua data hasil query dari database, baris demi baris, sampai tidak ada lagi data.
-    while ($row = mysqli_fetch_assoc($result)) {
-      echo "<tr>
-              <td>{$no}</td>
-              <td>{$row['nama_pelanggan']}</td>
-              <td>{$row['nama_layanan']}</td>
-              <td>{$row['tanggal']} {$row['jam_layanan']}</td>
-            </tr>";
-            
- // $no++ adalah increment operator dalam PHP.
-// Artinya: naikkan nilai variabel $no sebanyak 1.
-      $no++;
-    }
-    ?>
-  </table>
-
-<div id="eventPopup" style="display:none; position:fixed; top:20%; left:30%; background:#fff; border:1px solid #ccc; padding:20px; z-index:1000; width: 300px; box-shadow: 0 0 10px rgba(0,0,0,0.3); border-radius: 8px;">
-  <h3>Detail Booking</h3>
-  <p id="popupContent" style="white-space: pre-line;"></p>
-
-  <!-- Tombol Aksi -->
-  <div style="margin-top: 20px; display: flex; justify-content: space-between;">
-    <button onclick="closePopup()" style="padding: 5px 15px; background-color: #aaa; border: none; border-radius: 5px; color: white;">Tutup</button>
-    <button onclick="showEditPrompt()" style="padding: 5px 15px; background-color: #61d94fff; border: none; border-radius: 5px; color: white;">Edit</button>
-    <button onclick="deleteEvent()" style="padding: 5px 15px; background-color: #d9534f; border: none; border-radius: 5px; color: white;">Hapus</button>
+    <section class="content">
+      <div class="container-fluid">
+        <div class="row">
+          <div class="col-12 col-sm-6 col-md-3">
+            <div class="info-box">
+  <span class="info-box-icon bg-info elevation-1"><i class="fas fa-concierge-bell"></i></span>
+  <div class="info-box-content">
+    <span class="info-box-text">Total Layanan</span>
+    <span class="info-box-number"><?= htmlspecialchars($totalLayanan) ?></span>
   </div>
 </div>
 
-<!-- Overlay -->
-<div id="popupOverlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:999;" onclick="closePopup()"></div>
+            </div>
+          <div class="col-12 col-sm-6 col-md-3">
+           <div class="info-box mb-3">
+  <span class="info-box-icon bg-danger elevation-1"><i class="fas fa-calendar-day"></i></span>
+  <div class="info-box-content">
+    <span class="info-box-text">Booking Hari Ini</span>
+    <span class="info-box-number"><?= htmlspecialchars($bookingHariIni) ?></span>
+  </div>
+</div>
 
-<script>
-let selectedEvent = null; // Menyimpan event yang diklik
+            </div>
+          <div class="clearfix hidden-md-up"></div>
 
-document.addEventListener('DOMContentLoaded', function () {
-  const calendarEl = document.getElementById('calendar');
-  const calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: 'dayGridMonth',
-    selectable: true,
-    events: function(fetchInfo, successCallback, failureCallback) {
-      const deletedEvents = JSON.parse(localStorage.getItem('deletedEvents') || '[]');
-      const allEvents = <?= json_encode($events) ?>;
+          <div class="col-12 col-sm-6 col-md-3">
+            <div class="info-box mb-3">
+              <span class="info-box-icon bg-success elevation-1"><i class="fas fa-shopping-cart"></i></span>
 
-      const filtered = allEvents.filter(e => {
-        return !deletedEvents.some(d =>
-          d.title === e.title && d.date === e.start
-        );
-      });
+              <div class="info-box-content">
+                <span class="info-box-text">Total Booking</span>
+                <span class="info-box-number"><?= htmlspecialchars($totalBooking) ?></span>
+              </div>
+              </div>
+            </div>
+          <div class="col-12 col-sm-6 col-md-3">
+            <div class="info-box mb-3">
+              <span class="info-box-icon bg-warning elevation-1"><i class="fas fa-users"></i></span>
 
-      successCallback(filtered);
-    },
+              <div class="info-box-content">
+                <span class="info-box-text">Total Users</span>
+                <span class="info-box-number"><?= htmlspecialchars($totalUser) ?></span>
+              </div>
+              </div>
+            </div>
+          </div>
+        <div class="row">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">Kalender Booking</h3>
+              </div>
+              <div class="card-body">
+                <div id="calendar"></div>
+              </div>
+              </div>
+            </div>
+          </div>
+        <div class="modal fade" id="bookingModal" tabindex="-1" role="dialog" aria-labelledby="bookingModalLabel" aria-hidden="true">
+          <div class="modal-dialog" role="document">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="bookingModalLabel">Detail Booking</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                  <span aria-hidden="true">&times;</span>
+                </button>
+              </div>
+              <div class="modal-body">
+                </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div></section>
+    </div>
+  <aside class="control-sidebar control-sidebar-dark">
+    </aside>
+  <footer class="main-footer">
+    <strong>Copyright &copy; 2014-2021 <a href="https://adminlte.io">AdminLTE.io</a>.</strong>
+    All rights reserved.
+    <div class="float-right d-none d-sm-inline-block">
+      <b>Version</b> 3.1.0
+    </div>
+  </footer>
+ </div>
+ <script src="AdminLTE-3.1.0/plugins/jquery/jquery.min.js"></script>
+ <script src="AdminLTE-3.1.0/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+ <script src="AdminLTE-3.1.0/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
+ <script src="AdminLTE-3.1.0/dist/js/adminlte.js"></script>
 
-    dateClick: function(info) {
-      document.getElementById('selectedDate').value = info.dateStr;
-      document.getElementById('bookingDateText').textContent = "Tanggal: " + info.dateStr;
-      openModal();
-    },
+ <script src="AdminLTE-3.1.0/plugins/jquery-mousewheel/jquery.mousewheel.js"></script>
+ <script src="AdminLTE-3.1.0/plugins/raphael/raphael.min.js"></script>
+ <script src="AdminLTE-3.1.0/plugins/jquery-mapael/jquery.mapael.min.js"></script>
+ <script src="AdminLTE-3.1.0/plugins/jquery-mapael/maps/usa_states.min.js"></script>
+ <script src="AdminLTE-3.1.0/plugins/chart.js/Chart.min.js"></script>
 
-    eventClick: function(info) {
-      selectedEvent = info.event;
-      const title = info.event.title;
-      const date = info.event.startStr;
-      const content = `${title}\nTanggal: ${date}`;
-      showPopup(content);
-    }
-  });
+ <script src="AdminLTE-3.1.0/dist/js/demo.js"></script>
+ <script src="AdminLTE-3.1.0/dist/js/pages/dashboard2.js"></script>
 
-  calendar.render();
+ <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+ <script>
+   const daftarNama = <?= json_encode($daftarNama) ?>;
+   const daftarLayanan = <?= json_encode($daftarLayanan) ?>;
 
-  document.getElementById('bookingForm').addEventListener('submit', function(e) {
-    e.preventDefault();
+  document.addEventListener('DOMContentLoaded', function() {
+    var calendarEl = document.getElementById('calendar');
+    var calendar = new FullCalendar.Calendar(calendarEl, {
+      initialView: 'dayGridMonth',
+      headerToolbar: {
+        left: 'prev,next today',
+        center: 'title',
+        right: 'dayGridMonth,timeGridWeek,timeGridDay'
+      },
 
-    const tanggal = document.getElementById('selectedDate').value;
-    const namaPelanggan = document.getElementById('namaPelanggan').value;
-    const namaLayanan = document.getElementById('namaLayanan').value;
-    const jam = document.getElementById('jamLayanan').value;
+      // ✅ Tambahkan fitur klik tanggal
+      dateClick: function(info) {
+        const tanggal = info.dateStr;
+        const formHtml = `
+          <form id="formBooking">
+            <div class="form-group">
+             <label>Nama</label>
+<select name="nama" class="form-control" required>
+  <option value="">-- Pilih Nama --</option>
+  ${daftarNama.map(n => `<option value="${n}">${n}</option>`).join('')}
+</select>
 
-    fetch('admin.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        nama_pelanggan: namaPelanggan,
-        nama_layanan: namaLayanan,
-        jam_layanan: jam,
-        tanggal: tanggal
-      })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.status === 'sukses') {
-        calendar.addEvent({
-          title: `${namaLayanan} - ${jam} (${namaPelanggan})`,
-          start: tanggal
+            </div>
+            <div class="form-group">
+              <label>Layanan</label>
+              <select name="layanan" class="form-control" required>
+  <option value="">-- Pilih Layanan --</option>
+  ${daftarLayanan.map(l => `<option value="${l}">${l}</option>`).join('')}
+</select>
+
+
+            </div>
+            <div class="form-group">
+              <label>Jam</label>
+              <input type="time" name="waktu" class="form-control" required>
+            </div>
+            <input type="hidden" name="tanggal" value="${tanggal}">
+            <button type="submit" class="btn btn-primary mt-2">Simpan</button>
+          </form>
+        `;
+        $('#bookingModal .modal-body').html(formHtml);
+        $('#bookingModal').modal('show');
+
+        // Submit form
+        $('#formBooking').on('submit', function(e) {
+          e.preventDefault();
+          const data = $(this).serialize();
+          $.post('admin.php', data, function(response) {
+            if (response.status === 'sukses') {
+              $('#bookingModal').modal('hide');
+              location.reload(); // atau gunakan calendar.refetchEvents()
+            } else {
+              alert("Gagal: " + response.error);
+            }
+          }, 'json');
         });
-        closeModal();
-        document.getElementById('bookingForm').reset();
+      },
 
-        // Tambahan notifikasi sukses
-        Swal.fire({
-          title: "Selesai!",
-          text: "Data booking berhasil disimpan!",
-          icon: "success"
-        });
-
-      } else {
-        Swal.fire({
-          title: "Gagal!",
-          text: "Gagal menyimpan data: " + data.error,
-          icon: "error"
-        });
-      }
-    });
-  }); // <-- Penutup .addEventListener untuk bookingForm
-
-  // Fungsi modal buka/tutup
-  function openModal() {
-    document.getElementById('bookingModal').style.display = 'block';
-    document.getElementById('overlay').style.display = 'block';
-  }
-
-  window.closeModal = function () {
-  document.getElementById('bookingModal').style.display = 'none';
-  document.getElementById('overlay').style.display = 'none';
-}
-
-  function showPopup(content) {
-    document.getElementById('popupContent').innerText = content;
-    document.getElementById('eventPopup').style.display = 'block';
-    document.getElementById('popupOverlay').style.display = 'block';
-  }
-
-window.closePopup = function () {
-  document.getElementById('eventPopup').style.display = 'none';
-  document.getElementById('popupOverlay').style.display = 'none';
-  selectedEvent = null;
-}
-
-  // Fungsi untuk menghapus event
-  window.deleteEvent = function () {
-    if (selectedEvent) {
-      const deletedEvents = JSON.parse(localStorage.getItem('deletedEvents') || '[]');
-
-      deletedEvents.push({
-        title: selectedEvent.title,
-        date: selectedEvent.startStr
-      });
-
-      localStorage.setItem('deletedEvents', JSON.stringify(deletedEvents));
-
-      selectedEvent.remove();
-      closePopup();
-
-      Swal.fire({
-        title: "Selesai!",
-        text: "Jadwal berhasil dihapus dari kalender!",
-        icon: "success"
-      });
-    }
-  }
-
-  // Fungsi untuk mengedit jam layanan
-  window.showEditPrompt = function () {
-    if (!selectedEvent) return;
-
-    Swal.fire({
-      title: 'Edit Jam Layanan',
-      input: 'time',
-      inputLabel: 'Masukkan jam baru',
-      inputValue: selectedEvent.startStr.slice(11, 16),
-      showCancelButton: true,
-      confirmButtonText: 'Update',
-      preConfirm: (newTime) => {
-        if (!newTime) {
-          Swal.showValidationMessage('Jam tidak boleh kosong!');
-          return false;
-        }
-
-        const title = selectedEvent.title;
-        const tanggal = selectedEvent.startStr.split('T')[0];
-        const nama_layanan = title.split(' - ')[0];
-        const nama_pelanggan = title.match(/\((.*?)\)/)[1];
-
-        return fetch('update_jam.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({
-            nama_pelanggan,
-            nama_layanan,
-            tanggal,
-            jam_layanan: newTime
-          })
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.status !== 'sukses') {
-            throw new Error(data.error || 'Gagal update');
+      // ✅ Event dari database
+      events: [
+        <?php
+        $sql = "SELECT layanan, waktu, tanggal FROM booking";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+          while ($row = $result->fetch_assoc()) {
+            $layananClass = (strpos(strtolower($row['layanan']), 'premium') !== false) ? 'fc-event-premium' : 'fc-event-reguler';
+            $start = $row['tanggal'] . 'T' . date('H:i:s', strtotime($row['waktu']));
+            echo "{ title: '" . htmlspecialchars($row['layanan']) . "', start: '" . $start . "', className: '" . $layananClass . "' },";
           }
-          return newTime;
-        })
-        .catch(error => {
-          Swal.showValidationMessage(`Gagal: ${error}`);
-          return false;
-        });
-      }
-    }).then((result) => {
-      if (result.isConfirmed && result.value) {
-        const newTitle = selectedEvent.title.replace(/\d{2}:\d{2}/, result.value);
-        selectedEvent.setProp('title', newTitle);
-        Swal.fire('Berhasil!', 'Jam layanan berhasil diubah.', 'success');
-        closePopup();
+        }
+        ?>
+      ],
+
+      // ✅ Klik event → buka modal detail
+      eventClick: function(info) {
+        $('#bookingModal .modal-body').html(
+          '<strong>Layanan:</strong> ' + info.event.title +
+          '<br><strong>Waktu:</strong> ' + info.event.start.toLocaleString()
+        );
+        $('#bookingModal').modal('show');
       }
     });
-  }
-}); // <-- Penutup DOMContentLoaded
+
+    calendar.render();
+  });
 </script>
 
-
-
-
-  <div class="logout-link ">
-    <a href="logout.php">Logout</a>
-  </div>
-
-
-</body>
-</html>
+ </body>
+ </html>
