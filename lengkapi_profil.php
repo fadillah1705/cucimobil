@@ -82,6 +82,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </head>
 <body>
   <style>
+        html {
+        background-color: rgba(241, 245, 254, 1); /* Ini warna abu-abu kebiruan terang seperti di gambar profil sebelumnya */
+        /* Atau jika Anda ingin warna yang sama dengan yang Anda sebutkan di chat: */
+    }
+
+    body {
+        background-color: transparent; /* Pastikan body transparan agar warna html terlihat */
+        /* Atau jika Anda ingin body memiliki warna sendiri, Anda bisa tetap menentukannya di sini */
+        /* background-color: white; */ /* Contoh: untuk membuat area kartu putih tetap menonjol */
+        min-height: 100vh; /* Penting agar html mengisi seluruh viewport jika konten pendek */
+        display: flex; /* Menggunakan flexbox untuk memposisikan kartu di tengah */
+        justify-content: center;
+        align-items: center;
+        padding: 20px; /* Padding agar kartu tidak terlalu mepet ke tepi */
+    }
 /* ---------- Container & Card ---------- */
 .container {
   animation: fadeIn 0.8s ease-in-out;

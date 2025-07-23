@@ -30,13 +30,13 @@ session_start();
           <a class="nav-link" href="layanan.php">Layanan Kami</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="harga.php">Harga</a>
+          <a class="nav-link active" href="harga.php">Harga</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="testimoni.php">Testimoni</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link active" href="kontak.php">Kontak</a>
+          <a class="nav-link" href="kontak.php">Kontak</a>
         </li>
 
  <!-- profile -->

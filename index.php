@@ -3,16 +3,6 @@
 // Tanpa session_start();, kamu tidak bisa menggunakan atau menyimpan $_SESSION.
 session_start();
 
-// isset() memeriksa apakah variabel $_SESSION['username'] sudah ada atau belum.
-// !isset(...) berarti: "Jika username belum disetel di sesi" — alias user belum login.
-if (!isset($_SESSION['username'])) {
-// Kalau belum login, maka kita tetapkan username default menjadi "Tamu".
-  $_SESSION['username'] = 'Tamu';
-// Kita juga tetapkan role menjadi 'guest',terkantung yg mreka pilih antar admin,user
-  $_SESSION['role'] = 'guest';
-}
-
-
 ?> 
 <!DOCTYPE html>
 <html lang="id">
@@ -37,7 +27,7 @@ if (!isset($_SESSION['username'])) {
       <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav ms-auto">
         <li class="nav-item">
-          <a class="nav-link" href="index.php">Beranda</a>
+          <a class="nav-link active" href="index.php">Beranda</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="layanan.php">Layanan Kami</a>
@@ -49,7 +39,7 @@ if (!isset($_SESSION['username'])) {
           <a class="nav-link" href="testimoni.php">Testimoni</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link active" href="kontak.php">Kontak</a>
+          <a class="nav-link" href="kontak.php">Kontak</a>
         </li>
        
 <!-- profile -->

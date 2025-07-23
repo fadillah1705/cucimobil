@@ -24,10 +24,10 @@ session_start();
        <div class="collapse navbar-collapse" id="navbarNav">
       <ul class="navbar-nav ms-auto">
         <li class="nav-item">
-          <a class="nav-link" href="index.php">Beranda</a>
+          <a class="nav-link" href="index.php ">Beranda</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="layanan.php">Layanan Kami</a>
+          <a class="nav-link active" href="layanan.php">Layanan Kami</a>
         </li>
         <li class="nav-item">
           <a class="nav-link" href="harga.php">Harga</a>
@@ -36,7 +36,7 @@ session_start();
           <a class="nav-link" href="testimoni.php">Testimoni</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link active" href="kontak.php">Kontak</a>
+          <a class="nav-link " href="kontak.php">Kontak</a>
         </li>
 
 <!-- profile -->

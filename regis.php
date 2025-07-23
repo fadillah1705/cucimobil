@@ -19,7 +19,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $check->execute();
     $check->store_result();
 
-  $sql = "INSERT INTO users (username, password) VALUES (?, ? )";
+  $sql = "INSERT INTO mencuci (username, password) VALUES (?, ? )";
   $stmt = $conn->prepare($sql);
   $stmt->bind_param("ss", $username, $password);
 
@@ -29,7 +29,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } else {
       // Simpan ke database
 
-      $sql = "INSERT INTO users (username, password ) VALUES (?, ?)";
+      $sql = "INSERT INTO mencuci (username, password ) VALUES (?, ?)";
 
       $stmt = $conn->prepare($sql);
       $stmt->bind_param("ss", $username, $password);
