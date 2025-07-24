@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
                 if ($old_status_int === 0 && $new_status_int === 1) {
                     $points_per_wash = 10; // Define how many points are earned per wash
                     $stmt_update_loyalty = $conn->prepare("INSERT INTO loyalty_card (pelanggan_id, total_cuci, poin, terakhir_cuci) VALUES (?, 1, ?, CURDATE())
-                                                           ON DUPLICATE KEY UPDATE total_cuci = total_cuci + 1, poin = poin + ?, terakhir_cuci = CURDATE()");
+                                                            ON DUPLICATE KEY UPDATE total_cuci = total_cuci + 1, poin = poin + ?, terakhir_cuci = CURDATE()");
                     $stmt_update_loyalty->bind_param("iii", $pelanggan_id, $points_per_wash, $points_per_wash);
                     $stmt_update_loyalty->execute();
                     $stmt_update_loyalty->close();
@@ -83,8 +83,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updat
     }
     exit; // Stop script execution after handling AJAX request
 }
-
-// ... (Rest of your tab_booking.php code remains the same) ...
 
 // --- Logic for deleting a booking ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
@@ -168,7 +166,7 @@ $layananKurangData = $layananKurangResult->fetch_assoc();
 $layananKurang = $layananKurangData ? $layananKurangData['layanan'] : '-';
 $totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] : 0;
 
->>>>>>> fcdb753adb7ac9d98cd4ff82d4ae0abaff01391f
+$conn->close(); // Close the database connection after all operations
 ?>
 
 <!DOCTYPE html>
@@ -190,7 +188,7 @@ $totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] :
     <link rel="stylesheet" href="plugins/summernote/summernote-bs4.min.css">
 
     <style>
-        /* ... (Your existing CSS styles) ... */
+        /* Your existing CSS styles */
         .status-select {
             font-weight: bold;
             color: #ffffff;
@@ -273,27 +271,14 @@ $totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] :
             <span class="brand-text font-weight-light">AdminGoWash</span>
         </a>
 
-
-  <!-- Content Wrapper. Contains page content -->
-  <div class="content-wrapper">
-    <!-- Main content -->
-    <section class="content">
-      <div class="container-fluid">
-        <!-- Small boxes (Stat box) -->
-        <div class="row">
-          <div class="col-lg-3 col-6">
-            <!-- small box -->
-            <div class="small-box bg-info">
-              <div class="inner">
-<h6 style="font-weight: bold;"><?= htmlspecialchars($layananTerlaris) ?></h6>
-<p>Layanan Terlaris (<?= $totalLayananTerlaris ?>x)</p>
-<br>
-              </div>
-              <div class="icon">
-                <i class="ion ion-bag"></i>
-              </div>
-              <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-
+        <div class="sidebar">
+            <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+                <div class="image">
+                    <img src="dist/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
+                </div>
+                <div class="info">
+                    <a href="#" class="d-block"><?= htmlspecialchars($_SESSION['username']) ?></a>
+                </div>
             </div>
 
             <div class="form-inline">
@@ -306,31 +291,44 @@ $totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] :
                     </div>
                 </div>
             </div>
-              </div>
-              <div class="icon">
-                <i class="ion ion-person-add"></i>
-              </div>
-              <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-            </div>
-          </div>
-          <!-- ./col -->
-         <div class="col-lg-3 col-6">
-  <!-- small box -->
-  <div class="small-box bg-danger">
-    <div class="inner">
-      <h6 style="font-weight: bold;"><?= htmlspecialchars($layananKurang) ?></h6>
-      <p>Layanan Kurang Diminati (<?= $totalLayananKurang ?>x)</p>
-      <br>
-    </div>
-    <div class="icon">
-      <i class="fas fa-thumbs-down"></i>
-    </div>
-    <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-  </div>
-</div>
 
-          <!-- ./col -->
->>>>>>> fcdb753adb7ac9d98cd4ff82d4ae0abaff01391f
+            <nav class="mt-2">
+                <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                    <li class="nav-item">
+                        <li class="nav-item">
+                            <a href="../admin.php" class="nav-link">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>Dashboard</p>
+                            </a>
+                        </li>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="tab_booking.php" class="nav-link active">
+                            <i class="nav-icon fas fa-th"></i>
+                            <p>
+                                Booking
+                            </p>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="../admin-harga.php" class="nav-link">
+                            <i class="nav-icon fas fa-chart-pie"></i>
+                            <p>
+                                Layanan
+                            </p>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
+                        <a href="../logout.php" class="nav-link">
+                            <i class="nav-icon fas fa-sign-out-alt"></i>
+                            <p>Logout</p>
+                        </a>
+                    </li>
+                </ul>
+            </nav>
         </div>
     </aside>
 
@@ -342,17 +340,6 @@ $totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] :
         <section class="content">
             <div class="container-fluid">
                 <div class="row">
-                    <div class="col-lg-3 col-6">
-                        <div class="small-box bg-info">
-                            <div class="inner">
-                                <h3>150</h3> <p>New Orders</p>
-                            </div>
-                            <div class="icon">
-                                <i class="ion ion-bag"></i>
-                            </div>
-                            <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-                        </div>
-                    </div>
                     <div class="col-lg-3 col-6">
                         <div class="small-box bg-warning">
                             <div class="inner">
@@ -378,17 +365,30 @@ $totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] :
                         </div>
                     </div>
                     <div class="col-lg-3 col-6">
-                        <div class="small-box bg-danger">
+                        <div class="small-box bg-info">
                             <div class="inner">
-                                <h3>65</h3> <p>Unique Visitors</p>
-                            </div>
+                                <h6><?= htmlspecialchars($layananTerlaris) ?></h6>
+                                <p>Layanan Terlaris (<?= $totalLayananTerlaris ?> pesanan)</p>
+                            </div><br>
                             <div class="icon">
-                                <i class="ion ion-pie-graph"></i>
+                                <i class="ion ion-star"></i>
                             </div>
                             <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                         </div>
                     </div>
+                    <div class="col-lg-3 col-6">
+                        <div class="small-box bg-danger">
+                            <div class="inner">
+                                <h6><?= htmlspecialchars($layananKurang) ?></h6>
+                                <p>Layanan Kurang Diminati (<?= $totalLayananKurang ?> pesanan)</p>
+                            </div>
+                            <div class="icon">
+                                <i class="ion ion-minus-circled"></i>
+                            </div>
+                            <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+                        </div>
                     </div>
+                </div>
 
                 <div style="max-height: 500px; overflow-y: auto;">
                     <table class="table table-bordered table-striped">
@@ -417,7 +417,7 @@ $totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] :
                                     <td><?= date('H:i', strtotime($row['waktu'])) ?></td>
                                     <td><?= date('d-m-Y', strtotime(explode(' ', $row['tanggal'])[0])) ?></td>
                                     <td>
-                                        <span class="badge status-toggle bg-<?= ($row['status'] == 'Selesai' || $row['status'] == 1) ? 'success' : 'danger' ?>"
+                                        <span class="badge status-toggle bg-<?= ($row['status'] == 'Selesai' || $row['status'] == 1) ? 'success' : 'warning' ?>"
                                             data-id="<?= htmlspecialchars($row['id']) ?>"
                                             data-status="<?= ($row['status'] == 'Selesai' || $row['status'] == 1) ? 1 : 0 ?>"
                                             style="cursor:pointer;">
@@ -433,8 +433,9 @@ $totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] :
                     </table>
                 </div>
 
-                </div></section>
-        </div>
+            </div>
+        </section>
+    </div>
     <footer class="main-footer">
         <strong>Copyright &copy; 2014-2021 <a href="https://adminlte.io">AdminLTE.io</a>.</strong>
         All rights reserved.
@@ -465,126 +466,6 @@ $totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] :
 <script src="dist/js/adminlte.js"></script>
 <script src="dist/js/demo.js"></script>
 <script src="dist/js/pages/dashboard.js"></script>
-<<<<<<< HEAD
-=======
-<script>
-function hapusBooking(id) {
-  Swal.fire({
-    title: 'Yakin ingin menghapus?',
-    text: "Data booking ini akan dihapus permanen!",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    cancelButtonColor: '#3085d6',
-    confirmButtonText: 'Ya, hapus!',
-    cancelButtonText: 'Batal'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      fetch('booking-handler.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          action: 'delete',
-          id: id
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          document.getElementById('row-' + id).remove();
-          Swal.fire({
-            icon: 'success',
-            title: 'Berhasil',
-            text: 'Data booking berhasil dihapus.'
-          });
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Gagal',
-            text: 'Gagal menghapus data booking.'
-          });
-        }
-      })
-      .catch(err => {
-        console.error('Error:', err);
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'Terjadi kesalahan koneksi saat menghapus.'
-        });
-      });
-    }
-  });
-}
-
-
-</script>
-<script>
-<script>
-function hapusBooking(id) {
-  Swal.fire({
-    title: 'Yakin ingin menghapus?',
-    text: "Data booking ini akan dihapus permanen!",
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    cancelButtonColor: '#3085d6',
-    confirmButtonText: 'Ya, hapus!',
-    cancelButtonText: 'Batal'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      fetch('booking-handler.php', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          action: 'delete',
-          id: id
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          document.getElementById('row-' + id).remove();
-          Swal.fire({
-            icon: 'success',
-            title: 'Berhasil',
-            text: 'Data booking berhasil dihapus.'
-          });
-        } else {
-          Swal.fire({
-            icon: 'error',
-            title: 'Gagal',
-            text: 'Gagal menghapus data booking.'
-          });
-        }
-      })
-      .catch(err => {
-        console.error('Error:', err);
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: 'Terjadi kesalahan koneksi saat menghapus.'
-        });
-      });
-    }
-  });
-}
-</script>
-
-</script>
-<script>
-  $(document).ready(function ()) {
-    $(document).on('click', '.status-toggle', function ()) {
-      const badge = $(this);
-      const id = badge.data('id');
-      const current = badge.data('status'); // 1 atau 0
-      const next = current == 1 ? 0 : 1;
-    }
-}
 
 <script>
     // Function to handle booking deletion
@@ -599,8 +480,8 @@ function hapusBooking(id) {
             .then(data => {
                 if (data.success) {
                     document.getElementById('row-' + id).remove();
-                    // Optionally update the totalMenunggu/totalSelesai counts on the page without reload
-                    window.location.reload(); // Reload for simplicity to update counts
+                    // Reload for simplicity to update counts and dashboard stats
+                    window.location.reload(); 
                 } else {
                     alert('Gagal menghapus data booking: ' + (data.message || 'Unknown error.'));
                 }
@@ -646,10 +527,6 @@ function hapusBooking(id) {
         });
     });
 </script>
-
-<!-- SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 
 </body>
 </html>
