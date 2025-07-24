@@ -1,81 +1,86 @@
 <?php
- session_start();
- include "conn.php"; // Pastikan file conn.php ada dan koneksi berhasil
 
- // Cek session login (sesuaikan sesuai sistem autentikasi Anda)
- if (!isset($_SESSION['username'])) {
-     header("Location: login.php");
-     exit;
- }
-// --- Logika untuk MENANGANI PENYIMPANAN BOOKING dari form modal ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama']) && isset($_POST['layanan']) && isset($_POST['waktu']) && isset($_POST['tanggal'])) {
-    header('Content-Type: application/json'); // Penting untuk respons AJAX
+// ✅ Tangani form booking dari AJAX
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama'], $_POST['layanan'], $_POST['tanggal'], $_POST['waktu'])) {
+    include 'conn.php';
+    $nama = $_POST['nama'];
+    $layanan = $_POST['layanan'];
+    $tanggal = $_POST['tanggal'];
+    $waktu = $_POST['waktu'];
 
-    $nama = $conn->real_escape_string($_POST['nama']);
-    $layanan = $conn->real_escape_string($_POST['layanan']);
-    $waktu = $conn->real_escape_string($_POST['waktu']);
-    $tanggal = $conn->real_escape_string($_POST['tanggal']);
-    // 'status' akan default 'Menunggu' dari definisi tabel, jadi tidak perlu diinsert
-    // 'pelanggan_id' belum diketahui saat booking awal, bisa NULL atau bisa dicarikan jika 'nama' cocok dengan 'mencuci'
-
-    // Opsional: Coba cari pelanggan_id berdasarkan nama. Jika tidak ada, biarkan NULL atau buat pelanggan baru.
-    // Untuk sederhana, kita akan biarkan pelanggan_id NULL dulu atau Anda bisa menambahkannya secara manual
-    // setelah booking terbuat, atau tambahkan form pencarian/pembuatan pelanggan di modal.
-    $pelanggan_id = NULL; 
-    
-    // Contoh sederhana: Mencari pelanggan_id berdasarkan nama_lengkap di tabel mencuci
-    // Jika nama_lengkap di mencuci unik atau Anda punya cara lain untuk mengidentifikasi pelanggan.
-    // Kalau tidak unik, Anda mungkin perlu logic yang lebih kompleks atau minta ID pelanggan langsung.
-    $sql_get_pelanggan_id = "SELECT id FROM mencuci WHERE username = ?";
-    $stmt_get_pelanggan_id = $conn->prepare($sql_get_pelanggan_id);
-    if ($stmt_get_pelanggan_id) {
-        $stmt_get_pelanggan_id->bind_param("s", $nama);
-        $stmt_get_pelanggan_id->execute();
-        $result_pelanggan = $stmt_get_pelanggan_id->get_result();
-        if ($result_pelanggan->num_rows > 0) {
-            $pelanggan_data = $result_pelanggan->fetch_assoc();
-            $pelanggan_id = $pelanggan_data['id'];
-        }
-        $stmt_get_pelanggan_id->close();
-    }
-
-
-    $sql_insert = "INSERT INTO booking (pelanggan_id, nama, layanan, waktu, tanggal) VALUES (?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql_insert);
-
-    if ($stmt === false) {
-        echo json_encode(['status' => 'gagal', 'error' => 'Error preparing statement: ' . $conn->error]);
-        exit;
-    }
-
-    // Perhatikan urutan dan tipe data: "issss" -> i untuk int (pelanggan_id), s untuk string
-    $stmt->bind_param("issss", $pelanggan_id, $nama, $layanan, $waktu, $tanggal); 
+    // Simpan ke tabel booking
+    $stmt = $conn->prepare("INSERT INTO booking (nama, layanan, tanggal, waktu) VALUES (?, ?, ?, ?)");
+    $stmt->bind_param("ssss", $nama, $layanan, $tanggal, $waktu);
 
     if ($stmt->execute()) {
-        echo json_encode(['status' => 'sukses', 'message' => 'Booking berhasil disimpan!']);
+        echo json_encode(['status' => 'sukses']);
     } else {
-        echo json_encode(['status' => 'gagal', 'error' => 'Gagal menyimpan booking: ' . $stmt->error]);
+        echo json_encode(['status' => 'gagal', 'error' => $stmt->error]);
     }
-
-    $stmt->close();
-    $conn->close();
-    exit; // Penting untuk menghentikan eksekusi PHP setelah mengirim respons JSON
+    exit;
 }
+
+// ✅ Lanjutkan ke dashboard admin
+session_start();
+include "conn.php";
+
+// Cek session login
+if (!isset($_SESSION['username'])) {
+    header("Location: login.php");
+    exit;
+}
+
 
  $query = "SELECT COUNT(*) AS total_booking FROM booking";
  $result = $conn->query($query);
  $data = $result->fetch_assoc();
  $totalBooking = $data['total_booking'];
 
+>>>>>>> fcdb753adb7ac9d98cd4ff82d4ae0abaff01391f
  // Ambil jumlah total user
  $userQuery = "SELECT COUNT(*) AS total_user FROM mencuci where role='user'";
  $userResult = $conn->query($userQuery);
  $userData = $userResult->fetch_assoc();
  $totalUser = $userData['total_user'];
+
+
+// Ambil jumlah layanan dari tabel layanan
+$layananQuery = "SELECT COUNT(*) AS total_layanan FROM layanan";
+$layananResult = $conn->query($layananQuery);
+$layananData = $layananResult->fetch_assoc();
+$totalLayanan = $layananData['total_layanan'];
+
+// Menampilkan jumlah booking hari ini (tanggal = CURDATE() di SQL).
+$todayQuery = "SELECT COUNT(*) AS booking_hari_ini FROM booking WHERE tanggal = CURDATE()";
+$todayResult = $conn->query($todayQuery);
+$todayData = $todayResult->fetch_assoc();
+$bookingHariIni = $todayData['booking_hari_ini'];
+
+
+
+// TABEL KALENDER
+// Ambil daftar nama user (pelanggan) dari tabel mencuci
+$namaQuery = "SELECT DISTINCT nama FROM booking ORDER BY nama ASC";
+$namaResult = $conn->query($namaQuery);
+$daftarNama = [];
+while ($row = $namaResult->fetch_assoc()) {
+    $daftarNama[] = $row['nama'];
+}
+
+// Ambil daftar nama layanan dari tabel layanan
+$layananQuery = "SELECT nama FROM layanan ORDER BY nama ASC";
+$layananResult = $conn->query($layananQuery);
+$daftarLayanan = [];
+while ($row = $layananResult->fetch_assoc()) {
+    $daftarLayanan[] = $row['nama'];
+}
+
+
  ?>
 
 
 
+>>>>>>> fcdb753adb7ac9d98cd4ff82d4ae0abaff01391f
  <!DOCTYPE html>
  <html lang="en">
  <head>
@@ -122,35 +127,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama']) && isset($_PO
     white-space: normal;
     word-break: break-word;
   }
-   .fc-event-eksterior {
-  background-color: #007bff; /* biru */
-  border-color: #007bff;
-}
 
-.fc-event-interior {
-  background-color: #28a745; /* hijau */
-  border-color: #28a745;
-}
+   
+  /* Warna layanan premium */
+  .fc-event-premium {
+    background-color: #ff9500;
+    border-color: #e08600;
+  }
+   
+  /* Warna layanan reguler */
+  .fc-event-reguler {
+    background-color: #4a90e2;
+    border-color: #3a7bc8;
+  }
 
-.fc-event-detailing {
-  background-color: #fd7e14; /* oranye */
-  border-color: #fd7e14;
-}
-
-.fc-event-mobil {
-  background-color: #dc3545; /* merah */
-  border-color: #dc3545;
-}
-
-.fc-event-kaca {
-  background-color: #6f42c1; /* ungu */
-  border-color: #6f42c1;
-}
-
-.fc-event-perbaiki {
-  background-color: #795548; /* coklat */
-  border-color: #795548;
-}
    
   /* Hilangkan padding yang tidak perlu */
   .fc-daygrid-day {
@@ -213,7 +203,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama']) && isset($_PO
             <a href="AdminLTE-3.1.0/tab_booking.php" class="nav-link">
               <i class="nav-icon fas fa-th"></i>
               <p>
-                Booking
+
+                Widgets
+
               </p>
             </a>
           </li>
@@ -222,7 +214,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama']) && isset($_PO
             <a href="admin-harga.php" class="nav-link">
               <i class="nav-icon fas fa-chart-pie"></i>
               <p>
-               Layanan
+                Charts
+
               </p>
             </a>
           </li>
@@ -243,26 +236,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama']) && isset($_PO
         <div class="row">
           <div class="col-12 col-sm-6 col-md-3">
             <div class="info-box">
-              <span class="info-box-icon bg-info elevation-1"><i class="fas fa-cog"></i></span>
+  <span class="info-box-icon bg-info elevation-1"><i class="fas fa-concierge-bell"></i></span>
+  <div class="info-box-content">
+    <span class="info-box-text">Total Layanan</span>
+    <span class="info-box-number"><?= htmlspecialchars($totalLayanan) ?></span>
+  </div>
+</div>
 
-              <div class="info-box-content">
-                <span class="info-box-text">CPU Traffic</span>
-                <span class="info-box-number">
-                  10
-                  <small>%</small>
-                </span>
-              </div>
-              </div>
+
             </div>
           <div class="col-12 col-sm-6 col-md-3">
-            <div class="info-box mb-3">
-              <span class="info-box-icon bg-danger elevation-1"><i class="fas fa-thumbs-up"></i></span>
+           <div class="info-box mb-3">
+  <span class="info-box-icon bg-danger elevation-1"><i class="fas fa-calendar-day"></i></span>
+  <div class="info-box-content">
+    <span class="info-box-text">Booking Hari Ini</span>
+    <span class="info-box-number"><?= htmlspecialchars($bookingHariIni) ?></span>
+  </div>
+</div>
 
-              <div class="info-box-content">
-                <span class="info-box-text">Likes</span>
-                <span class="info-box-number">41,410</span>
-              </div>
-              </div>
+
             </div>
           <div class="clearfix hidden-md-up"></div>
 
@@ -342,8 +334,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama']) && isset($_PO
  <script src="AdminLTE-3.1.0/dist/js/demo.js"></script>
  <script src="AdminLTE-3.1.0/dist/js/pages/dashboard2.js"></script>
 
+
  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
  <script>
+   const daftarNama = <?= json_encode($daftarNama) ?>;
+   const daftarLayanan = <?= json_encode($daftarLayanan) ?>;
+
+
   document.addEventListener('DOMContentLoaded', function() {
     var calendarEl = document.getElementById('calendar');
     var calendar = new FullCalendar.Calendar(calendarEl, {
@@ -360,21 +357,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama']) && isset($_PO
         const formHtml = `
           <form id="formBooking">
             <div class="form-group">
-              <label>Nama</label>
-              <input type="text" name="nama" class="form-control" required>
+             <label>Nama</label>
+<select name="nama" class="form-control" required>
+  <option value="">-- Pilih Nama --</option>
+  ${daftarNama.map(n => `<option value="${n}">${n}</option>`).join('')}
+</select>
+
             </div>
             <div class="form-group">
               <label>Layanan</label>
               <select name="layanan" class="form-control" required>
-                <option value="">-- Pilih Layanan --</option>
-                <option value="Cuci Eksterior">Cuci Eksterior</option>
-                <option value="Cuci Interior">Cuci Interior</option>
-                <option value="Detailing">Detailing</option>
-                <option value="Cuci Mobil">Cuci Mobil</option>
-                <option value="Salon Mobil Kaca">Salon Mobil Kaca</option>
-                <option value="Perbaiki Mesin">Perbaiki Mesin</option>
-                
-              </select>
+  <option value="">-- Pilih Layanan --</option>
+  ${daftarLayanan.map(l => `<option value="${l}">${l}</option>`).join('')}
+</select>
+
+
             </div>
             <div class="form-group">
               <label>Jam</label>
@@ -404,34 +401,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama']) && isset($_PO
 
       // ✅ Event dari database
       events: [
-    <?php
-$sql = "SELECT layanan, waktu, tanggal FROM booking";
-$result = $conn->query($sql);
-if ($result->num_rows > 0) {
-  while ($row = $result->fetch_assoc()) {
-    $layanan = strtolower(trim($row['layanan']));
-    
-    // Map layanan ke class warna
-    $classMap = [
-      'cuci eksterior' => 'fc-event-eksterior',
-      'cuci interior' => 'fc-event-interior',
-      'detailing' => 'fc-event-detailing',
-      'cuci mobil' => 'fc-event-mobil',
-      'salon mobil kaca' => 'fc-event-kaca',
-      'perbaiki mesin' => 'fc-event-perbaiki'
-    ];
-
-    // Jika tidak ada di map, pakai class default
-    $layananClass = isset($classMap[$layanan]) ? $classMap[$layanan] : 'fc-event-reguler';
-
-    // Format waktu
-    $start = $row['tanggal'] . 'T' . date('H:i:s', strtotime($row['waktu']));
-    
-    // Cetak event
-    echo "{ title: '" . htmlspecialchars($row['layanan']) . "', start: '" . $start . "', className: '" . $layananClass . "' },";
-  }
-}
-?>
+        <?php
+        $sql = "SELECT layanan, waktu, tanggal FROM booking";
+        $result = $conn->query($sql);
+        if ($result->num_rows > 0) {
+          while ($row = $result->fetch_assoc()) {
+            $layananClass = (strpos(strtolower($row['layanan']), 'premium') !== false) ? 'fc-event-premium' : 'fc-event-reguler';
+            $start = $row['tanggal'] . 'T' . date('H:i:s', strtotime($row['waktu']));
+            echo "{ title: '" . htmlspecialchars($row['layanan']) . "', start: '" . $start . "', className: '" . $layananClass . "' },";
+          }
+        }
+        ?>
 
       ],
 
@@ -446,7 +426,8 @@ if ($result->num_rows > 0) {
     });
 
     calendar.render();
-  });
+  });
+
 </script>
 
  </body>

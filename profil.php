@@ -2,164 +2,151 @@
 include 'conn.php';
 session_start();
 
+// "Ambil username dari session kalau ada, kalau tidak ada, kasih string kosong sebagai gantinya."
+$username = $_SESSION['username'] ?? '';
+
+// Mengecek apakah pengguna belum login,pastikan user sudah login dulu,
+// Artinya: user belum login,kalo sudah di arahkan ke halaman login.php
+
 if (!isset($_SESSION['username'])) {
     header("Location: login.php");
     exit;
 }
 
-
-$username = $_SESSION['username'];
-$role = $_SESSION['role'] ?? '';
-
-$stmt = $conn->prepare("SELECT id, nama_lengkap, foto, gender FROM mencuci WHERE username = ?");
-if ($stmt === false) {
-    die("Error preparing user data statement: " . $conn->error);
-}
-$stmt->bind_param("s", $username);
-$stmt->execute();
-$result = $stmt->get_result();
-$data = $result->fetch_assoc();
-
-if (!$data) {
-    echo "User tidak ditemukan.";
+// berarti menolak akses untuk pengguna yang berperan sebagai "guest" (tamu),Pengguna langsung dialihkan ke index.php.
+// Mengecek apakah role (peran) dari user yang sedang login adalah 'guest'.
+if ($_SESSION['role'] === 'guest') {
+  // Arahkan tamu ke halaman utama
+    header("Location: index.php");
     exit;
 }
 
-$userId = $data['id'];
+// berfungsi untuk mengambil data sesi login pengguna, yaitu username dan role-nya
+$username = $_SESSION['username'];
+$role = $_SESSION['role'] ?? '';
+
+
+// digunakan untuk mengambil data profil pengguna dari database berdasarkan username yang sedang login.
+// $stmt menyimpan perintah SQL yang sudah dipersiapkan dan siap dijalankan.
+// 1. $conn->prepare(...):Fungsi ini digunakan untuk mempersiapkan perintah SQL
+// Ambil (SELECT) 3 kolom dari tabel mencuci:
+// Placeholder (?) :agar query lebih aman dan terhindar dari SQL Injection (data yang di bocorkan oleh manusia nakal,jadi harus pakai ?)
+$stmt = $conn->prepare("SELECT nama_lengkap, foto, gender FROM mencuci WHERE username = ?");
+// bind_param() digunakan untuk mengikat nilai variabel ke query SQL yang menggunakan tanda ? (placeholder).
+// "s" menunjukkan bahwa nilai yang diikat adalah bertipe string.
+// Isi tanda ? dalam query dengan nilai dari $username, dan anggap itu string.
+// mengikat nilai variabel $username ke pernyataan SQL yang menggunakan prepared statement.
+// Tujuannya agar query aman dari serangan SQL Injection.
+
+$stmt->bind_param("s", $username);
+//  Menjalankan query SQL yang sudah dipersiapkan tadi.
+$stmt->execute();
+// Ambil hasil dari query yang barusan dijalankan pakai $stmt->execute() tadi.
+$result = $stmt->get_result();
+// Karena kamu pakai fetch_assoc() tanpa perulangan. Artinya kamu hanya ambil baris pertama saja.
+// Ambil 1 baris data dari hasil query tadi, dan ubah menjadi array asosiasi (pakai nama kolom sebagai key).
+$data = $result->fetch_assoc();
+
+
+// ?? '' itu apa : Itu namanya Null Coalescing Operator di PHP
+// artinya Kalau ['key'] itu ada dan tidak null, pakai nilainya,Tapi kalau tidak ada atau null, maka pakai nilai default, yaitu string kosong ''.
+//Ambil nama_lengkap,foto dan gender dari array $data.
+// Kalau tidak ada, kasih nilai kosong (''),supaya tidak error
+
 $namaLengkap = $data['nama_lengkap'] ?? '';
 $foto = $data['foto'] ?? '';
 $gender = $data['gender'] ?? '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action'])) {
-        // Handle Delete Foto Profil
-        if ($_POST['action'] === 'delete') {
-            if (!empty($foto) && file_exists("uploads/$foto")) {
-                unlink("uploads/$foto");
-            }
-            $stmt = $conn->prepare("UPDATE mencuci SET foto = NULL WHERE username = ?");
-            if ($stmt === false) {
-                die("Error preparing delete foto statement: " . $conn->error);
-            }
-            $stmt->bind_param("s", $username);
-            $stmt->execute();
-            header("Location: profil.php");
-            exit;
-        }
 
-        // Handle Upload Foto Profil Baru
-        if ($_POST['action'] === 'upload') {
-            if (isset($_FILES['foto']) && $_FILES['foto']['error'] === 0) {
-                $ext = pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION);
-                $namaBaru = uniqid() . '.' . $ext;
+// Cek apakah variabel $foto tidak kosong dan file-nya ada di folder uploads/.
 
-                if (!empty($foto) && file_exists("uploads/$foto")) {
-                    unlink("uploads/$foto");
-                }
+if (!empty($foto) && file_exists("uploads/$foto")) {
+//  Kalau ada, gunakan foto milik user sebagai profil.
+// htmlspecialchars() dipakai untuk mencegah XSS (keamanan) kalau ada karakter aneh di nama file.
+    $fotoProfil = "uploads/" . htmlspecialchars($foto);
 
-                move_uploaded_file($_FILES['foto']['tmp_name'], "uploads/$namaBaru");
-
-                $stmt = $conn->prepare("UPDATE mencuci SET foto = ? WHERE username = ?");
-                if ($stmt === false) {
-                    die("Error preparing upload foto statement: " . $conn->error);
-                }
-                $stmt->bind_param("ss", $namaBaru, $username);
-                $stmt->execute();
-
-                header("Location: profil.php");
-                exit;
-            } else {
-                echo "<script>alert('Gagal mengunggah file.');</script>";
-            }
-        }
-
-        // Handle Klaim Reward (hanya mencatat klaim, tidak mereset loyalty card di sini)
-        if ($_POST['action'] === 'claim_reward') {
-            // Re-fetch totalCuci to ensure it's up-to-date before allowing claim
-            $stmt_recheck = $conn->prepare("SELECT total_cuci FROM loyalty_card WHERE pelanggan_id = ?");
-            if ($stmt_recheck === false) {
-                die("Error preparing loyalty recheck statement: " . $conn->error);
-            }
-            $stmt_recheck->bind_param("i", $userId);
-            $stmt_recheck->execute();
-            $result_recheck = $stmt_recheck->get_result();
-            $loyalty_recheck = $result_recheck->fetch_assoc();
-            $currentTotalCuci = $loyalty_recheck['total_cuci'] ?? 0;
-
-            // Cek apakah ada klaim reward yang masih pending untuk user ini
-            $stmt_check_pending_claim = $conn->prepare("SELECT COUNT(*) AS total_pending FROM reward_claims WHERE pelanggan_id = ? AND status = 'Pending'");
-            if ($stmt_check_pending_claim === false) {
-                die("Error preparing pending claim check statement: " . $conn->error);
-            }
-            $stmt_check_pending_claim->bind_param("i", $userId);
-            $stmt_check_pending_claim->execute();
-            $result_pending_claim = $stmt_check_pending_claim->get_result();
-            $pending_claim_count = $result_pending_claim->fetch_assoc()['total_pending'];
-
-
-            if ($userId && $currentTotalCuci >= 9 && $pending_claim_count == 0) { // Minimal 9 stamp untuk klaim FREE ke-10 DAN tidak ada klaim pending
-                // HANYA CATAT KLAIM REWARD KE TABEL reward_claims DENGAN STATUS 'Pending'
-                // Logika reset loyalty_card dan penghapusan booking 'Selesai'
-                // AKAN DITANGANI OLEH ADMIN DI admin.php SAAT KLAIM DISETUJUI.
-                $klaimTanggal = date('Y-m-d H:i:s'); // Menggunakan datetime untuk presisi
-                $stmt_claim = $conn->prepare("INSERT INTO reward_claims (pelanggan_id, klaim_tanggal, status) VALUES (?, ?, 'Pending')");
-                if ($stmt_claim === false) {
-                    die("Error preparing insert claim statement: " . $conn->error);
-                }
-                $stmt_claim->bind_param("is", $userId, $klaimTanggal);
-                
-                if ($stmt_claim->execute()) {
-                    echo "<script>alert('Reward berhasil diajukan! Silakan tunggu konfirmasi dari admin. Poin Anda belum direset.'); window.location.href='profil.php';</script>";
-                    exit;
-                } else {
-                    echo "<script>alert('Gagal mengajukan klaim reward: " . $stmt_claim->error . "'); window.location.href='profil.php';</script>";
-                    exit;
-                }
-            } else {
-                echo "<script>alert('Anda belum memenuhi syarat untuk mengklaim reward atau sudah ada klaim yang menunggu konfirmasi.'); window.location.href='profil.php';</script>";
-                exit;
-            }
-        }
+} else {
+// Kalau user belum upload foto:
+// Kalau gender-nya Pria, pakai download.png (gambar default pria).
+    if ($gender === "Pria") {
+        $fotoProfil = "uploads/download.png";
+// Kalau Wanita, pakai wn.png (gambar default wanita).
+    } elseif ($gender === "Wanita") {
+        $fotoProfil = "uploads/wn.png";
+// Kalau gender belum diisi atau bukan "Pria/Wanita", pakai avatar.webp (gambar umum/default).
+    } else {
+        $fotoProfil = "uploads/avatar.webp";
     }
 }
 
-// Ambil data loyalty card sesuai user_id (setelah potensi reset)
-$stmt = $conn->prepare("SELECT total_cuci, poin, terakhir_cuci FROM loyalty_card WHERE pelanggan_id = ?");
-if ($stmt === false) {
-    die("Error preparing loyalty card statement: " . $conn->error);
-}
-$stmt->bind_param("i", $userId);
-$stmt->execute();
-$result = $stmt->get_result();
-$loyalty = $result->fetch_assoc();
-
-$totalCuci = $loyalty['total_cuci'] ?? 0;
-$poin = $loyalty['poin'] ?? 0;
-$terakhirCuci = $loyalty['terakhir_cuci'] ?? '-';
-
-// Ambil semua tanggal booking yang sudah selesai
-$bookingDates = [];
-$stmtDates = $conn->prepare("SELECT tanggal FROM booking WHERE pelanggan_id = ? AND status = 'Selesai' ORDER BY tanggal ASC");
-if ($stmtDates === false) {
-    die("Error preparing booking dates statement: " . $conn->error);
-}
-$stmtDates->bind_param("i", $userId);
-$stmtDates->execute();
-$resultDates = $stmtDates->get_result();
-while ($row = $resultDates->fetch_assoc()) {
-    $bookingDates[] = $row['tanggal'];
+// === Hapus Foto ===
+// Dan terdapat input action yang nilainya "delete".
+// 📝 Artinya: user mengirim permintaan untuk menghapus foto profil.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete') {
+// ➡️ Cek apakah:
+// Variabel $foto tidak kosong, artinya user memang punya foto profil.
+// File dengan nama itu benar-benar ada di folder uploads/.
+    if (!empty($foto) && file_exists("uploads/$foto")) {
+// ➡️ Fungsi unlink() digunakan untuk menghapus file dari server.
+// ✅ Jadi, jika semua kondisi di atas terpenuhi, maka foto profil milik user akan dihapus dari folder uploads/.
+        unlink("uploads/$foto");
+    }
+// Ini membuat prepared statement untuk mengubah kolom foto di tabel mencuci menjadi NULL, hanya untuk user yang login (username = ?).
+// Artinya: di database, informasi tentang foto profil dikosongkan.
+    $stmt = $conn->prepare("UPDATE mencuci SET foto = NULL WHERE username = ?");
+// Mengikat nilai $username (tipe string, makanya "s") ke tanda ? tadi di query.
+// Jadi perubahan ini hanya untuk user yang sedang login.
+    $stmt->bind_param("s", $username);
+  //  Menjalankan perintah UPDATE tadi: menghapus data foto dari user tersebut.
+    $stmt->execute();
+// Setelah update berhasil, user akan dialihkan kembali ke halaman profil.php.
+    header("Location: profil.php");
+    exit;
 }
 
-// Tentukan gambar profil yang akan ditampilkan
-if (!empty($foto) && file_exists("uploads/$foto")) {
-    $fotoProfil = "uploads/" . htmlspecialchars($foto);
-} else {
-    if ($gender === "Pria") {
-        $fotoProfil = "uploads/download.png";
-    } elseif ($gender === "Wanita") {
-        $fotoProfil = "uploads/wn.png";
+// === Upload Foto Baru ===
+// Artinya: ini blok kode hanya dijalankan jika user memang menekan tombol "Upload Foto".
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'upload') {
+  //Mengecek apakah file input foto tersedia dan tidak ada error saat di-upload (error === 0 berarti sukses).
+// Jadi: hanya lanjut kalau benar-benar ada file foto yang diunggah dan tidak rusak.
+    if (isset($_FILES['foto']) && $_FILES['foto']['error'] === 0) {
+// Mengambil ekstensi file yang diunggah, misalnya: jpg, png, webp, dll.      // 
+        $ext = pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION);
+// uniqid() akan membuat ID acak, misalnya 64cfe4f2c9c2b.
+// Kemudian ditambah . dan ekstensi tadi, jadi hasilnya misalnya 64cfe4f2c9c2b.jpg.
+// Tujuan: hindari nama file tabrakan dengan file orang lain.
+        $namaBaru = uniqid() . '.' . $ext;
+
+// !empty($foto): mengecek apakah variabel $foto tidak kosong (artinya, user sudah punya foto profil sebelumnya).
+// file_exists("uploads/$foto"): mengecek apakah file foto tersebut benar-benar ada di folder uploads/.
+        if (!empty($foto) && file_exists("uploads/$foto")) {
+          // Fungsi unlink() digunakan untuk menghapus file dari server.
+            unlink("uploads/$foto");
+        }
+
+ // Fungsi move_uploaded_file() digunakan untuk memindahkan file yang baru saja di-upload oleh user dari lokasi sementara ke folder tujuan di server.
+//  👉 Ini adalah lokasi sementara (temporary) file yang di-upload sebelum disimpan ke server.
+// "uploads/$namaBaru"
+// 👉 Ini adalah lokasi tujuan penyimpanan file di server.
+        move_uploaded_file($_FILES['foto']['tmp_name'], "uploads/$namaBaru");
+
+
+// menyimpan nama file foto yang baru diupload ke database, agar nanti bisa ditampilkan di profil pengguna.
+// 👉 Membuat prepared statement untuk mengupdate kolom foto di tabel mencuci, berdasarkan username tertentu.
+// Tanda ? disebut placeholder – ini tempat data akan di-bind untuk mencegah SQL Injection.
+        $stmt = $conn->prepare("UPDATE mencuci SET foto = ? WHERE username = ?");
+// 👉 Mengikat dua nilai ke placeholder tadi:
+// "ss" artinya: parameter pertama dan kedua bertipe string
+// $namaBaru adalah nama file baru yang di-upload
+// $username adalah username pengguna yang sedang login
+        $stmt->bind_param("ss", $namaBaru, $username);
+ // Menjalankan perintah SQL-nya. Setelah ini, kolom foto di database akan berisi nama file yang baru diupload.
+        $stmt->execute();
+// SETELAH ITU AKAN DI ARAHKAN KE HALAMANA PROFIL
+        header("Location: profil.php");
+        exit;
     } else {
-        $fotoProfil = "uploads/avatar.webp";
+        echo "<script>alert('Gagal mengunggah file.');</script>";
     }
 }
 ?>
@@ -282,16 +269,14 @@ if (!empty($foto) && file_exists("uploads/$foto")) {
 <body>
 
 <div class="container mt-5">
-    <div class="card mx-auto p-4 shadow-sm" style="max-width: 500px;">
-        <h4 class="text-center mb-4">Haii, <?= htmlspecialchars($username) ?>!</h4>
-        <div class="text-center">
-            <img src="<?= $fotoProfil ?>" class="profile-img" alt="Foto Profil" />
-            <br />
-            <button class="btn btn-outline-primary btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#editFotoModal">Edit Foto Profil</button>
-        </div>
-        <p><strong>Username :</strong> <?= htmlspecialchars($username) ?></p>
-        <p><strong>Nama Lengkap :</strong> <?= !empty($namaLengkap) ? htmlspecialchars($namaLengkap) : '<em>~Belum diisi</em>~' ?></p>
-        <p><strong>Gender :</strong> <?= !empty($gender) ? htmlspecialchars($gender) : '<em>~Belum diisi~</em>' ?></p>
+
+  <div class="card mx-auto p-4 shadow-sm" style="max-width: 500px;">
+   <h4 class="text-center mb-4">
+  <?php
+  echo "Haii, " . htmlspecialchars($_SESSION['username']) . "!";
+  ?>
+</h4>
+>>>>>>> fcdb753adb7ac9d98cd4ff82d4ae0abaff01391f
 
         <div class="mt-4 p-3 rounded text-white loyalty-card-container">
             <h4 class="text-center text-white"><strong>LOYALTY CARD</strong></h4>

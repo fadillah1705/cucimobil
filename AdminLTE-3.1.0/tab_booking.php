@@ -152,7 +152,23 @@ $selesaiResult = $conn->query($selesaiQuery);
 $selesaiData = $selesaiResult->fetch_assoc();
 $totalSelesai = $selesaiData['total_selesai'];
 
-$conn->close(); // Close the database connection after all operations
+// Ambil layanan terlaris
+$layananQuery = "SELECT layanan, COUNT(*) AS total_pesanan FROM booking GROUP BY layanan ORDER BY total_pesanan DESC LIMIT 1";
+$layananResult = $conn->query($layananQuery);
+$layananTerlarisData = $layananResult->fetch_assoc();
+
+$layananTerlaris = $layananTerlarisData ? $layananTerlarisData['layanan'] : '-';
+$totalLayananTerlaris = $layananTerlarisData ? $layananTerlarisData['total_pesanan'] : 0;
+
+// Ambil layanan kurang diminati
+$layananKurangQuery = "SELECT layanan, COUNT(*) AS total_pesanan FROM booking GROUP BY layanan ORDER BY total_pesanan ASC LIMIT 1";
+$layananKurangResult = $conn->query($layananKurangQuery);
+$layananKurangData = $layananKurangResult->fetch_assoc();
+
+$layananKurang = $layananKurangData ? $layananKurangData['layanan'] : '-';
+$totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] : 0;
+
+>>>>>>> fcdb753adb7ac9d98cd4ff82d4ae0abaff01391f
 ?>
 
 <!DOCTYPE html>
@@ -257,14 +273,27 @@ $conn->close(); // Close the database connection after all operations
             <span class="brand-text font-weight-light">AdminGoWash</span>
         </a>
 
-        <div class="sidebar">
-            <div class="user-panel mt-3 pb-3 mb-3 d-flex">
-                <div class="image">
-                    <img src="dist/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
-                </div>
-                <div class="info">
-                    <a href="#" class="d-block"><?= htmlspecialchars($_SESSION['username']) ?></a>
-                </div>
+
+  <!-- Content Wrapper. Contains page content -->
+  <div class="content-wrapper">
+    <!-- Main content -->
+    <section class="content">
+      <div class="container-fluid">
+        <!-- Small boxes (Stat box) -->
+        <div class="row">
+          <div class="col-lg-3 col-6">
+            <!-- small box -->
+            <div class="small-box bg-info">
+              <div class="inner">
+<h6 style="font-weight: bold;"><?= htmlspecialchars($layananTerlaris) ?></h6>
+<p>Layanan Terlaris (<?= $totalLayananTerlaris ?>x)</p>
+<br>
+              </div>
+              <div class="icon">
+                <i class="ion ion-bag"></i>
+              </div>
+              <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+
             </div>
 
             <div class="form-inline">
@@ -277,44 +306,31 @@ $conn->close(); // Close the database connection after all operations
                     </div>
                 </div>
             </div>
+              </div>
+              <div class="icon">
+                <i class="ion ion-person-add"></i>
+              </div>
+              <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+          </div>
+          <!-- ./col -->
+         <div class="col-lg-3 col-6">
+  <!-- small box -->
+  <div class="small-box bg-danger">
+    <div class="inner">
+      <h6 style="font-weight: bold;"><?= htmlspecialchars($layananKurang) ?></h6>
+      <p>Layanan Kurang Diminati (<?= $totalLayananKurang ?>x)</p>
+      <br>
+    </div>
+    <div class="icon">
+      <i class="fas fa-thumbs-down"></i>
+    </div>
+    <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+  </div>
+</div>
 
-            <nav class="mt-2">
-                <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
-                    <li class="nav-item">
-                        <li class="nav-item">
-                            <a href="../admin.php" class="nav-link">
-                                <i class="far fa-circle nav-icon"></i>
-                                <p>Dashboard</p>
-                            </a>
-                        </li>
-                    </li>
-
-                    <li class="nav-item">
-                        <a href="tab_booking.php" class="nav-link active">
-                            <i class="nav-icon fas fa-th"></i>
-                            <p>
-                                Booking
-                            </p>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a href="../admin-harga.php" class="nav-link">
-                            <i class="nav-icon fas fa-chart-pie"></i>
-                            <p>
-                                Layanan
-                            </p>
-                        </a>
-                    </li>
-
-                    <li class="nav-item">
-                        <a href="../logout.php" class="nav-link">
-                            <i class="nav-icon fas fa-sign-out-alt"></i>
-                            <p>Logout</p>
-                        </a>
-                    </li>
-                </ul>
-            </nav>
+          <!-- ./col -->
+>>>>>>> fcdb753adb7ac9d98cd4ff82d4ae0abaff01391f
         </div>
     </aside>
 
@@ -449,6 +465,126 @@ $conn->close(); // Close the database connection after all operations
 <script src="dist/js/adminlte.js"></script>
 <script src="dist/js/demo.js"></script>
 <script src="dist/js/pages/dashboard.js"></script>
+<<<<<<< HEAD
+=======
+<script>
+function hapusBooking(id) {
+  Swal.fire({
+    title: 'Yakin ingin menghapus?',
+    text: "Data booking ini akan dihapus permanen!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Ya, hapus!',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      fetch('booking-handler.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          action: 'delete',
+          id: id
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('row-' + id).remove();
+          Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: 'Data booking berhasil dihapus.'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: 'Gagal menghapus data booking.'
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Terjadi kesalahan koneksi saat menghapus.'
+        });
+      });
+    }
+  });
+}
+
+
+</script>
+<script>
+<script>
+function hapusBooking(id) {
+  Swal.fire({
+    title: 'Yakin ingin menghapus?',
+    text: "Data booking ini akan dihapus permanen!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Ya, hapus!',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      fetch('booking-handler.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          action: 'delete',
+          id: id
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('row-' + id).remove();
+          Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: 'Data booking berhasil dihapus.'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: 'Gagal menghapus data booking.'
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Terjadi kesalahan koneksi saat menghapus.'
+        });
+      });
+    }
+  });
+}
+</script>
+
+</script>
+<script>
+  $(document).ready(function ()) {
+    $(document).on('click', '.status-toggle', function ()) {
+      const badge = $(this);
+      const id = badge.data('id');
+      const current = badge.data('status'); // 1 atau 0
+      const next = current == 1 ? 0 : 1;
+    }
+}
 
 <script>
     // Function to handle booking deletion
@@ -510,6 +646,10 @@ $conn->close(); // Close the database connection after all operations
         });
     });
 </script>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 
 </body>
 </html>
