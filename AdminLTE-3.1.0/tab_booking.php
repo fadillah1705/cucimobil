@@ -430,49 +430,112 @@ $totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] :
 <script src="dist/js/pages/dashboard.js"></script>
 <script>
 function hapusBooking(id) {
-  if (confirm("Yakin ingin menghapus data booking ini dari database?")) {
-    fetch('booking-handler.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ action: 'delete', id: id })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        document.getElementById('row-' + id).remove();
-      } else {
-        alert('Gagal menghapus data booking.');
-      }
-    })
-    .catch(err => {
-      console.error('Error:', err);
-      alert('Terjadi kesalahan saat menghapus.');
-    });
-  }
+  Swal.fire({
+    title: 'Yakin ingin menghapus?',
+    text: "Data booking ini akan dihapus permanen!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Ya, hapus!',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      fetch('booking-handler.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          action: 'delete',
+          id: id
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('row-' + id).remove();
+          Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: 'Data booking berhasil dihapus.'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: 'Gagal menghapus data booking.'
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Terjadi kesalahan koneksi saat menghapus.'
+        });
+      });
+    }
+  });
 }
+
+
 </script>
 <script>
+<script>
 function hapusBooking(id) {
-  if (confirm("Yakin ingin menghapus data booking ini dari database?")) {
-    fetch('booking-handler.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ action: 'delete', id: id })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        document.getElementById('row-' + id).remove();
-      } else {
-        alert('Gagal menghapus data booking.');
-      }
-    })
-    .catch(err => {
-      console.error('Error:', err);
-      alert('Terjadi kesalahan saat menghapus.');
-    });
-  }
+  Swal.fire({
+    title: 'Yakin ingin menghapus?',
+    text: "Data booking ini akan dihapus permanen!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Ya, hapus!',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      fetch('booking-handler.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          action: 'delete',
+          id: id
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('row-' + id).remove();
+          Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: 'Data booking berhasil dihapus.'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: 'Gagal menghapus data booking.'
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Terjadi kesalahan koneksi saat menghapus.'
+        });
+      });
+    }
+  });
 }
+</script>
+
 </script>
 <script>
   $(document).ready(function () {
@@ -510,6 +573,10 @@ function hapusBooking(id) {
     });
   });
 </script>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 
 </body>
 </html>

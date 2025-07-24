@@ -9,20 +9,20 @@ $swalScript = "";
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
   // ✅ Login sebagai tamu
-  if (isset($_POST["login"]) && $_POST["login"] === "guest") {
-    $_SESSION["username"] = "Tamu";
-    $_SESSION["role"] = "guest";
-    $swalScript = "
-      <script>
-        Swal.fire({
-          icon: 'success',
-          title: 'Masuk sebagai tamu berhasil!',
-          confirmButtonText: 'OK'
-        }).then(() => {
-          window.location.href = 'index.php';
-        });
-      </script>";
-  }
+  // if (isset($_POST["login"]) && $_POST["login"] === "guest") {
+  //   $_SESSION["username"] = "Tamu";
+  //   $_SESSION["role"] = "guest";
+  //   $swalScript = "
+  //     <script>
+  //       Swal.fire({
+  //         icon: 'success',
+  //         title: 'Masuk sebagai tamu berhasil!',
+  //         confirmButtonText: 'OK'
+  //       }).then(() => {
+  //         window.location.href = 'index.php';
+  //       });
+  //     </script>";
+  // }
 
   // ✅ Login sebagai user / admin
   if (isset($_POST["username"]) && isset($_POST["password"])) {
@@ -120,7 +120,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
             <button type="submit" name="login" value="user" class="btn btn-success w-100 mb-2">Login User</button>
             <button type="submit" name="login" value="admin" class="btn btn-primary w-100 mb-2">Login Admin</button>
-            <button type="submit" name="login" value="guest" class="btn btn-outline-secondary w-100 mb-3">Masuk tanpa akun</button>
+           <a href="index.php" class="btn btn-outline-secondary w-100 mb-3">Kembali ke beranda</a>
+
           </form>
 
           <!-- Pesan Error -->

@@ -311,10 +311,8 @@ $editMode = is_array($editService);
                                 <i class="bi bi-pencil"></i>
                             </a>
                             <?php if ($service['is_active']): ?>
-                                <a href="admin-harga.php?delete=<?= $service['id'] ?>" class="btn btn-sm btn-danger" 
-                                   onclick="return confirm('Yakin ingin menghapus layanan ini?')">
-                                    <i class="bi bi-trash"></i>
-                                </a>
+                              <a href="#" class="btn btn-sm btn-danger" onclick="confirmDelete(<?= $service['id'] ?>)">
+                                <i class="bi bi-trash"></i>
                             <?php else: ?>
                                 <a href="admin-harga.php?activate=<?= $service['id'] ?>" class="btn btn-sm btn-success">
                                     <i class="bi bi-check-circle"></i>
@@ -336,17 +334,46 @@ $editMode = is_array($editService);
   <script src="AdminLTE-3.1.0/dist/js/adminlte.js"></script>
 
   <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // Tangani klik pada badge status
-    document.querySelectorAll('.status-badge').forEach(badge => {
-      badge.addEventListener('click', function(e) {
-        e.preventDefault();
-        
-        const serviceId = this.getAttribute('data-id');
-        const isCurrentlyActive = this.classList.contains('bg-success');
-        const newStatus = isCurrentlyActive ? 0 : 1;
-        
-        if(confirm(`Anda yakin ingin ${isCurrentlyActive ? 'menonaktifkan' : 'mengaktifkan'} layanan ini?`)) {
+    function confirmDelete(serviceId) {
+  Swal.fire({
+    title: 'Hapus Layanan?',
+    text: 'Layanan akan dihapus secara permanen.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: 'Hapus',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      window.location.href = `admin-harga.php?delete=${serviceId}`;
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Tangani klik pada badge status
+  document.querySelectorAll('.status-badge').forEach(badge => {
+    badge.addEventListener('click', function(e) {
+      e.preventDefault();
+
+      const serviceId = this.getAttribute('data-id');
+      const isCurrentlyActive = this.classList.contains('bg-success');
+      const newStatus = isCurrentlyActive ? 0 : 1;
+      const badgeElement = this;
+
+      // Gunakan SweetAlert untuk konfirmasi
+      Swal.fire({
+        title: 'Konfirmasi',
+        text: `Anda yakin ingin ${isCurrentlyActive ? 'menonaktifkan' : 'mengaktifkan'} layanan ini?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya',
+        cancelButtonText: 'Batal',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#d33'
+      }).then((result) => {
+        if (result.isConfirmed) {
           const formData = new FormData();
           formData.append('update_status', true);
           formData.append('id', serviceId);
@@ -360,24 +387,29 @@ $editMode = is_array($editService);
           .then(data => {
             if(data.success) {
               // Update tampilan
-              this.classList.toggle('bg-success');
-              this.classList.toggle('bg-danger');
-              this.textContent = newStatus ? 'Aktif' : 'Nonaktif';
-              
-              // Show notification
-              alert('Status berhasil diubah');
+              badgeElement.classList.toggle('bg-success');
+              badgeElement.classList.toggle('bg-danger');
+              badgeElement.textContent = newStatus ? 'Aktif' : 'Nonaktif';
+
+              Swal.fire('Berhasil', 'Status berhasil diubah', 'success');
             } else {
-              alert('Gagal mengubah status');
+              Swal.fire('Gagal', 'Gagal mengubah status', 'error');
             }
           })
           .catch(error => {
             console.error('Error:', error);
-            alert('Terjadi kesalahan');
+            Swal.fire('Error', 'Terjadi kesalahan saat mengubah status', 'error');
           });
         }
       });
     });
   });
-  </script>
+});
+</script>
+
+
+  <!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 </body>
 </html>
