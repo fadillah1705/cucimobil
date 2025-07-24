@@ -3,12 +3,12 @@
 // Tanpa session_start();, kamu tidak bisa menggunakan atau menyimpan $_SESSION.
 session_start();
 
-// isset() memeriksa apakah variabel $_SESSION['username'] sudah ada atau belum.
-// !isset(...) berarti: "Jika username belum disetel di sesi" — alias user belum login.
+// memeriksa apakah variabel $_SESSION['username'] sudah ada atau belum alias user belum login
 if (!isset($_SESSION['username'])) {
 // Kalau belum login, maka kita tetapkan username default menjadi "Tamu".
   $_SESSION['username'] = 'Tamu';
-// Kita juga tetapkan role menjadi 'guest',terkantung yg mreka pilih antar admin,user
+// peran pengguna (role) ke dalam session dengan nilai 'guest', yang artinya user tersebut adalah pengunjung biasa (bukan admin atau user yang login).
+// Kita juga set bahwa role-nya adalah 'guest', artinya hanya bisa lihat fitur-fitur dasar, tidak bisa akses halaman admin atau lainnya.
   $_SESSION['role'] = 'guest';
 }
 

@@ -45,6 +45,23 @@ $selesaiQuery = "SELECT COUNT(*) AS total_selesai FROM booking WHERE status = 1 
 $selesaiResult = $conn->query($selesaiQuery);
 $selesaiData = $selesaiResult->fetch_assoc();
 $totalSelesai = $selesaiData['total_selesai'];
+
+// Ambil layanan terlaris
+$layananQuery = "SELECT layanan, COUNT(*) AS total_pesanan FROM booking GROUP BY layanan ORDER BY total_pesanan DESC LIMIT 1";
+$layananResult = $conn->query($layananQuery);
+$layananTerlarisData = $layananResult->fetch_assoc();
+
+$layananTerlaris = $layananTerlarisData ? $layananTerlarisData['layanan'] : '-';
+$totalLayananTerlaris = $layananTerlarisData ? $layananTerlarisData['total_pesanan'] : 0;
+
+// Ambil layanan kurang diminati
+$layananKurangQuery = "SELECT layanan, COUNT(*) AS total_pesanan FROM booking GROUP BY layanan ORDER BY total_pesanan ASC LIMIT 1";
+$layananKurangResult = $conn->query($layananKurangQuery);
+$layananKurangData = $layananKurangResult->fetch_assoc();
+
+$layananKurang = $layananKurangData ? $layananKurangData['layanan'] : '-';
+$totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] : 0;
+
 ?>
 
 <!DOCTYPE html>
@@ -247,9 +264,9 @@ $totalSelesai = $selesaiData['total_selesai'];
             <!-- small box -->
             <div class="small-box bg-info">
               <div class="inner">
-                <h3>150</h3>
-
-                <p>New Orders</p>
+<h6 style="font-weight: bold;"><?= htmlspecialchars($layananTerlaris) ?></h6>
+<p>Layanan Terlaris (<?= $totalLayananTerlaris ?>x)</p>
+<br>
               </div>
               <div class="icon">
                 <i class="ion ion-bag"></i>
@@ -288,20 +305,21 @@ $totalSelesai = $selesaiData['total_selesai'];
             </div>
           </div>
           <!-- ./col -->
-          <div class="col-lg-3 col-6">
-            <!-- small box -->
-            <div class="small-box bg-danger">
-              <div class="inner">
-                <h3>65</h3>
+         <div class="col-lg-3 col-6">
+  <!-- small box -->
+  <div class="small-box bg-danger">
+    <div class="inner">
+      <h6 style="font-weight: bold;"><?= htmlspecialchars($layananKurang) ?></h6>
+      <p>Layanan Kurang Diminati (<?= $totalLayananKurang ?>x)</p>
+      <br>
+    </div>
+    <div class="icon">
+      <i class="fas fa-thumbs-down"></i>
+    </div>
+    <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
+  </div>
+</div>
 
-                <p>Unique Visitors</p>
-              </div>
-              <div class="icon">
-                <i class="ion ion-pie-graph"></i>
-              </div>
-              <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
-            </div>
-          </div>
           <!-- ./col -->
         </div>
         
@@ -412,49 +430,112 @@ $totalSelesai = $selesaiData['total_selesai'];
 <script src="dist/js/pages/dashboard.js"></script>
 <script>
 function hapusBooking(id) {
-  if (confirm("Yakin ingin menghapus data booking ini dari database?")) {
-    fetch('booking-handler.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ action: 'delete', id: id })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        document.getElementById('row-' + id).remove();
-      } else {
-        alert('Gagal menghapus data booking.');
-      }
-    })
-    .catch(err => {
-      console.error('Error:', err);
-      alert('Terjadi kesalahan saat menghapus.');
-    });
-  }
+  Swal.fire({
+    title: 'Yakin ingin menghapus?',
+    text: "Data booking ini akan dihapus permanen!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Ya, hapus!',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      fetch('booking-handler.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          action: 'delete',
+          id: id
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('row-' + id).remove();
+          Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: 'Data booking berhasil dihapus.'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: 'Gagal menghapus data booking.'
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Terjadi kesalahan koneksi saat menghapus.'
+        });
+      });
+    }
+  });
 }
+
+
 </script>
 <script>
+<script>
 function hapusBooking(id) {
-  if (confirm("Yakin ingin menghapus data booking ini dari database?")) {
-    fetch('booking-handler.php', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({ action: 'delete', id: id })
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        document.getElementById('row-' + id).remove();
-      } else {
-        alert('Gagal menghapus data booking.');
-      }
-    })
-    .catch(err => {
-      console.error('Error:', err);
-      alert('Terjadi kesalahan saat menghapus.');
-    });
-  }
+  Swal.fire({
+    title: 'Yakin ingin menghapus?',
+    text: "Data booking ini akan dihapus permanen!",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    cancelButtonColor: '#3085d6',
+    confirmButtonText: 'Ya, hapus!',
+    cancelButtonText: 'Batal'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      fetch('booking-handler.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: new URLSearchParams({
+          action: 'delete',
+          id: id
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          document.getElementById('row-' + id).remove();
+          Swal.fire({
+            icon: 'success',
+            title: 'Berhasil',
+            text: 'Data booking berhasil dihapus.'
+          });
+        } else {
+          Swal.fire({
+            icon: 'error',
+            title: 'Gagal',
+            text: 'Gagal menghapus data booking.'
+          });
+        }
+      })
+      .catch(err => {
+        console.error('Error:', err);
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Terjadi kesalahan koneksi saat menghapus.'
+        });
+      });
+    }
+  });
 }
+</script>
+
 </script>
 <script>
   $(document).ready(function () {
@@ -492,6 +573,10 @@ function hapusBooking(id) {
     });
   });
 </script>
+
+<!-- SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 
 </body>
 </html>
