@@ -107,22 +107,30 @@ $services = $conn->query("SELECT * FROM services WHERE is_active = 1 ORDER BY pr
                 
                 foreach ($services as $service): ?>
                 <div class="col-md-4 col-lg-3">
-                    <div class="card service-card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title fw-bold"><?= htmlspecialchars($service['name']) ?></h5>
-                            <p class="mb-1"><?= nl2br(htmlspecialchars($service['description'])) ?></p>
-                            <p class="text-muted">Menggunakan <?= htmlspecialchars($service['product_used']) ?></p>
-                            
-                            <p class="text-muted mt-3">Harga sekali cuci</p>
-                            <h5 class="fw-bold">Rp<?= number_format($service['price'], 0, ',', '.') ?></h5>
-                            
-                            <form action="wa.php" method="POST">
-                                <input type="hidden" name="layanan" value="<?= htmlspecialchars($service['name']) ?>">
-                                <button type="submit" class="btn btn-booking mt-2">Booking</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
+    <div class="card service-card h-100">
+        <div class="card-body text-center">
+            <h5 class="card-title fw-bold"><?= htmlspecialchars($service['name']) ?></h5>
+            
+            <!-- Gambar lingkaran -->
+            <img src="<?= htmlspecialchars($service['image']) ?>" 
+                 alt="<?= htmlspecialchars($service['name']) ?>" 
+                 class="rounded-circle mb-3" 
+                 style="width: 100px; height: 100px; object-fit: cover;">
+
+            <p class="mb-1"><?= nl2br(htmlspecialchars($service['description'])) ?></p>
+            <p class="text-muted">Menggunakan <?= htmlspecialchars($service['product_used']) ?></p>
+
+            <p class="text-muted mt-3">Harga sekali cuci</p>
+            <h5 class="fw-bold">Rp<?= number_format($service['price'], 0, ',', '.') ?></h5>
+
+            <form action="wa.php" method="POST">
+                <input type="hidden" name="layanan" value="<?= htmlspecialchars($service['name']) ?>">
+                <button type="submit" class="btn btn-booking mt-2">Pesan</button>
+            </form>
+        </div>
+    </div>
+</div>
+
                 <?php endforeach; ?>
             </div>
         </div>

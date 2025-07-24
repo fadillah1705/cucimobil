@@ -8,10 +8,10 @@ if ($_SESSION['role'] !== 'admin') {
     exit;
 }
 
-// Ambil data layanan yang akan diedit jika ada parameter ?edit
+// Ambil data layanan untuk edit
+$editService = null;
 if (isset($_GET['edit'])) {
     $id = intval($_GET['edit']);
-
     $stmt = $conn->prepare("SELECT * FROM services WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
@@ -21,81 +21,146 @@ if (isset($_GET['edit'])) {
 
 // Handle CRUD operations
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Lokasi penyimpanan gambar
+    $uploadDir = 'img/services/';
+    if (!is_dir($uploadDir)) {
+        mkdir($uploadDir, 0777, true); // Buat folder jika belum ada
+    }
+
+    // ================================
+    // === TAMBAH LAYANAN BARU
+    // ================================
     if (isset($_POST['add_service'])) {
-        // Tambah layanan baru
-        $stmt = $conn->prepare("INSERT INTO services (name, description, product_used, price) VALUES (?, ?, ?, ?)");
-        $stmt->bind_param("sssd", 
+        $uploadedImagePath = '';
+
+        // Upload gambar
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $tmpName = $_FILES['image']['tmp_name'];
+            $originalName = basename($_FILES['image']['name']);
+            $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+            $newName = uniqid('service_', true) . '.' . $extension;
+            $destination = $uploadDir . $newName;
+
+            // Validasi ekstensi
+            $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
+            if (!in_array($extension, $allowedExt)) {
+                echo "Format gambar tidak didukung!";
+                exit;
+            }
+
+            // Pindahkan file
+            if (move_uploaded_file($tmpName, $destination)) {
+                $uploadedImagePath = $destination;
+            } else {
+                echo "Gagal mengupload gambar.";
+                exit;
+            }
+        } else {
+            echo "Gambar tidak ditemukan atau terjadi error upload.";
+            exit;
+        }
+
+        // Insert ke database
+        $stmt = $conn->prepare("INSERT INTO services (name, image, description, product_used, price) VALUES (?, ?, ?, ?, ?)");
+        if (!$stmt) {
+            echo "Gagal prepare statement: " . $conn->error;
+            exit;
+        }
+
+        $stmt->bind_param("ssssd", 
             $_POST['name'],
+            $uploadedImagePath,
             $_POST['description'],
             $_POST['product_used'],
             $_POST['price']
         );
-        $stmt->execute();
 
+        if ($stmt->execute()) {
+            header("Location: admin-harga.php?success=added");
+            exit;
+        } else {
+            echo "Gagal menambahkan layanan: " . $stmt->error;
+        }
+
+    // ================================
+    // === UPDATE LAYANAN
+    // ================================
     } elseif (isset($_POST['update_service'])) {
-        // Update layanan
-        $stmt = $conn->prepare("UPDATE services SET name = ?, description = ?, product_used = ?, price = ? WHERE id = ?");
-        $stmt->bind_param("sssdi", 
+        $id = $_POST['id'];
+        $uploadedImagePath = $editService['image'] ?? ''; // Default: pakai gambar lama
+
+        // Jika gambar baru diupload
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+            $tmpName = $_FILES['image']['tmp_name'];
+            $originalName = basename($_FILES['image']['name']);
+            $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
+            $newName = uniqid('service_', true) . '.' . $extension;
+            $destination = $uploadDir . $newName;
+
+            if (move_uploaded_file($tmpName, $destination)) {
+                $uploadedImagePath = $destination;
+            } else {
+                echo "Gagal mengupload gambar.";
+                exit;
+            }
+        }
+
+        $stmt = $conn->prepare("UPDATE services SET name = ?, image = ?, description = ?, product_used = ?, price = ? WHERE id = ?");
+        $stmt->bind_param("ssssdi", 
             $_POST['name'], 
+            $uploadedImagePath,
             $_POST['description'], 
             $_POST['product_used'], 
             $_POST['price'], 
-            $_POST['id']
+            $id
         );
-        
+
         if ($stmt->execute()) {
-            echo "Layanan berhasil diupdate!";
+            header("Location: admin-harga.php?success=updated");
+            exit;
         } else {
             echo "Gagal update layanan: " . $stmt->error;
         }
 
+    // ================================
+    // === UPDATE STATUS LAYANAN
+    // ================================
     } elseif (isset($_POST['update_status'])) {
-        // Handle status update via AJAX
         $id = $_POST['id'];
         $newStatus = $_POST['status'];
 
         $stmt = $conn->prepare("UPDATE services SET is_active = ? WHERE id = ?");
         $stmt->bind_param("ii", $newStatus, $id);
 
-        if ($stmt->execute()) {
-            echo json_encode(['success' => true]);
-        } else {
-            echo json_encode(['success' => false, 'message' => $stmt->error]);
-        }
+        echo json_encode(['success' => $stmt->execute()]);
         exit;
     }
 }
 
-// Handle delete/activate
+// ================================
+// === DELETE / ACTIVATE
+// ================================
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
-
-    // Pertama set is_active jadi 0 (tidak aktif)
-    $stmt = $conn->prepare("UPDATE services SET is_active = 0 WHERE id = ?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
-
-    // Kemudian benar-benar hapus
     $stmt = $conn->prepare("DELETE FROM services WHERE id = ?");
     $stmt->bind_param("i", $id);
 
     if ($stmt->execute()) {
         header("Location: admin-harga.php?success=deleted");
-        exit();
+        exit;
     } else {
         echo "<script>alert('Gagal menghapus layanan');</script>";
     }
-
-    $stmt->close();
 } elseif (isset($_GET['activate'])) {
     $stmt = $conn->prepare("UPDATE services SET is_active = 1 WHERE id = ?");
     $stmt->bind_param("i", $_GET['activate']);
     $stmt->execute();
 }
 
-// Ambil semua layanan
+// Ambil semua data layanan
 $services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name");
 ?>
+
 
 
 <!DOCTYPE html>
@@ -235,40 +300,52 @@ endif;
 $editMode = is_array($editService);
 ?>
 
-<form method="POST" >
+<form method="POST" enctype="multipart/form-data">
     <?php if ($editMode): ?>
         <input type="hidden" name="id" value="<?= htmlspecialchars($editService['id']) ?>">
     <?php endif; ?>
-    
+
     <div class="mb-3">
         <label for="name" class="form-label">Nama Layanan</label>
         <input type="text" class="form-control" id="name" name="name" 
                value="<?= $editMode ? htmlspecialchars($editService['name']) : '' ?>" required>
     </div>
-    
+
+    <!-- Upload Gambar -->
+    <div class="mb-3">
+        <label for="image" class="form-label">Foto Layanan</label>
+        <input type="file" class="form-control" id="image" name="image" accept="image/*" <?= $editMode ? '' : 'required' ?>>
+        <?php if ($editMode && !empty($editService['image'])): ?>
+    <div class="mt-2">
+        <img src="/<?= htmlspecialchars($editService['image']) ?>" alt="Preview" width="100" class="rounded-circle">
+    </div>
+<?php endif; ?>
+
+    </div>
+
     <div class="mb-3">
         <label for="description" class="form-label">Deskripsi</label>
         <textarea class="form-control" id="description" name="description" rows="3" required><?= 
             $editMode ? htmlspecialchars($editService['description']) : '' ?></textarea>
     </div>
-    
+
     <div class="mb-3">
         <label for="product_used" class="form-label">Produk Digunakan</label>
         <input type="text" class="form-control" id="product_used" name="product_used" 
                value="<?= $editMode ? htmlspecialchars($editService['product_used']) : '' ?>" required>
     </div>
-    
-    
-                    <div class="mb-3">
-                        <label for="price" class="form-label">Harga (Rp)</label>
-                        <input type="number" class="form-control" id="price" name="price" 
-                               value="<?= $editMode ? htmlspecialchars($editService['price']) : '' ?>" required>
-                    </div>
-    <!-- Tombol Submit -->
+
+    <div class="mb-3">
+        <label for="price" class="form-label">Harga (Rp)</label>
+        <input type="number" class="form-control" id="price" name="price" 
+               value="<?= $editMode ? htmlspecialchars($editService['price']) : '' ?>" required>
+    </div>
+
     <button type="submit" name="<?= $editMode ? 'update_service' : 'add_service' ?>" class="btn btn-primary">
         <?= $editMode ? 'Update' : 'Tambah' ?> Layanan
     </button>
 </form>
+
 
                     
                     
@@ -286,6 +363,7 @@ $editMode = is_array($editService);
                 <thead>
                     <tr>
                         <th>Nama Layanan</th>
+                        <th>Foto</th>
                         <th>Deskripsi</th>
                         <th>Produk</th>
                         <th>Harga</th>
@@ -297,6 +375,10 @@ $editMode = is_array($editService);
                     <?php foreach ($services as $service): ?>
                     <tr>
                         <td><?= htmlspecialchars($service['name']) ?></td>
+                        <td>
+  <img src="/ft-cucimobil/<?= htmlspecialchars($service['image']) ?>" alt="Gambar Layanan" width="60" height="60" style="object-fit: cover; border-radius: 8px;">
+</td>
+
                         <td><?= nl2br(htmlspecialchars($service['description'])) ?></td>
                         <td><?= htmlspecialchars($service['product_used']) ?></td>
                         <td>Rp<?= number_format($service['price'], 0, ',', '.') ?></td>
