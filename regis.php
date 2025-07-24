@@ -1,3 +1,4 @@
+
 <?php
 include "conn.php";
 
@@ -76,14 +77,14 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
           <?php endif; ?>
           
           <form method="POST">
-          <!-- <div class="mb-3">
+          <div class="mb-3">
     <label class="form-label">Role</label>
     <select class="form-select" name="role" required>
       <option value="">Pilih Role</option>
       <option value="admin">Admin</option>
       <option value="user">User</option>
     </select>
-  </div> -->
+  </div>
 
             <div class="mb-3">
               <label for="username" class="form-label">Username</label>

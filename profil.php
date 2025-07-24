@@ -139,7 +139,7 @@ $terakhirCuci = $loyalty['terakhir_cuci'] ?? '-';
 
 // Ambil semua tanggal booking yang sudah selesai
 $bookingDates = [];
-$stmtDates = $conn->prepare("SELECT tanggal FROM emsit_cucimobil WHERE pelanggan_id = ? AND status = 'Selesai' ORDER BY tanggal ASC");
+$stmtDates = $conn->prepare("SELECT tanggal FROM booking WHERE pelanggan_id = ? AND status = 'Selesai' ORDER BY tanggal ASC");
 if ($stmtDates === false) {
     die("Error preparing booking dates statement: " . $conn->error);
 }
@@ -290,12 +290,11 @@ if (!empty($foto) && file_exists("uploads/$foto")) {
             <button class="btn btn-outline-primary btn-sm mt-2" data-bs-toggle="modal" data-bs-target="#editFotoModal">Edit Foto Profil</button>
         </div>
         <p><strong>Username :</strong> <?= htmlspecialchars($username) ?></p>
-        <p><strong>Nama Lengkap :</strong> <?= !empty($namaLengkap) ? htmlspecialchars($namaLengkap) : '<em>Belum diisi</em>' ?></p>
-        <p><strong>Gender :</strong> <?= !empty($gender) ? htmlspecialchars($gender) : '<em>Belum diisi</em>' ?></p>
+        <p><strong>Nama Lengkap :</strong> <?= !empty($namaLengkap) ? htmlspecialchars($namaLengkap) : '<em>~Belum diisi</em>~' ?></p>
+        <p><strong>Gender :</strong> <?= !empty($gender) ? htmlspecialchars($gender) : '<em>~Belum diisi~</em>' ?></p>
 
         <div class="mt-4 p-3 rounded text-white loyalty-card-container">
             <h4 class="text-center text-white"><strong>LOYALTY CARD</strong></h4>
-            <p><strong>Nama :</strong> <?= htmlspecialchars($namaLengkap) ?></p>
             <p><strong>Total Cuci :</strong> <?= (int)$totalCuci ?> kali</p>
             <p><strong>Poin :</strong> <span class="badge bg-warning text-dark"><?= (int)$poin ?> Poin</span></p>
             <p><strong>Terakhir Cuci :</strong> <?= htmlspecialchars($terakhirCuci) ?></p>

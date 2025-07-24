@@ -112,7 +112,7 @@ session_start();
              <img src="Mobiklin_Cuci_Mobil.webp" class="card-img-top" alt="...">
             <div class="card-body">
               <h5 class="card-title">Cuci Mobil</h5>
-              <p class="card-text">Pembersihan menyeluruh bagian luar mobil menggunakan alat bertekanan tinggi untuk hasil maksimal</p>
+              <p class="card-text">Pembersihan menyeluruh bagian luar dan dalam mobil menggunakan alat bertekanan tinggi untuk hasil maksimal</p>
             </div>
           </div>
         </div>
