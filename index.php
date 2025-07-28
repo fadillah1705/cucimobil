@@ -12,6 +12,7 @@ if (!isset($_SESSION['username'])) {
   $_SESSION['role'] = 'guest';
 }
 
+
 ?> 
 <!DOCTYPE html>
 <html lang="id">
@@ -48,7 +49,7 @@ if (!isset($_SESSION['username'])) {
           <a class="nav-link" href="testimoni.php">Testimoni</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="kontak.php">Kontak</a>
+          <a class="nav-link " href="kontak.php">Kontak</a>
         </li>
        
 <!-- profile -->
@@ -92,11 +93,6 @@ if (!isset($_SESSION['username'])) {
          
           <h1 class="display-5 fw-bold">GoWash<br>Panggilan Profesional</h1>
           <p class="lead mt-3">Tunggu di rumah saja, jasa cuci dan salon mobil kami, siap membersihkan mobil anda kapanpun dibutuhkan. Ayo mulai berlangganan sekarang!</p>
-            <a href="https://wa.me/6281353638585?text=Halo%20GoWash%2C%20saya%20tertarik%20dengan%20paket%20layanan%20cuci%20mobil " 
-     target="_blank" 
-    class="btn btn-success btn-sm fw-bold">
-    Pesan Via WhatsApp
-  </a>
  <div class="text-center mt-4">
   <a href="https://google.com" class="text-dark me-3" target="_blank">
     <i class="bi bi-google fs-2"></i>

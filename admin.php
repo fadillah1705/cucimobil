@@ -1,10 +1,9 @@
 <?php
-
 session_start();
 include "conn.php"; // Pastikan file conn.php ada dan koneksi berhasil
 
 // Cek session login
-if (!isset($_SESSION['username'])) {
+if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     header("Location: login.php");
     exit;
 }
@@ -34,7 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama'], $_POST['layan
         $stmt_get_pelanggan_id->close();
     }
 
-
     $sql_insert = "INSERT INTO booking (pelanggan_id, nama, layanan, tanggal, waktu) VALUES (?, ?, ?, ?, ?)";
     $stmt = $conn->prepare($sql_insert);
 
@@ -56,6 +54,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama'], $_POST['layan
     $conn->close();
     exit; // Penting untuk menghentikan eksekusi PHP setelah mengirim respons JSON
 }
+
+// --- Logika untuk MENANGANI PENGHAPUSAN BOOKING dari modal (via AJAX) ---
+// CATATAN: Logika ini TETAP ADA untuk kasus di mana Anda mungkin ingin menghapus dari database
+// melalui endpoint ini di masa mendatang atau dari halaman lain.
+// Namun, tombol "Hapus" di kalender di JavaScript TIDAK LAGI memanggil endpoint ini.
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'deleteBooking') {
+    header('Content-Type: application/json');
+
+    $id = intval($_POST['id'] ?? 0);
+
+    if ($id > 0) {
+        // Optional: Decrement loyalty card if a 'Selesai' booking is deleted
+        $stmt_get_booking_info = $conn->prepare("SELECT status, pelanggan_id FROM booking WHERE id = ?");
+        $stmt_get_booking_info->bind_param("i", $id);
+        $stmt_get_booking_info->execute();
+        $result_booking_info = $stmt_get_booking_info->get_result();
+        $booking_info = $result_booking_info->fetch_assoc();
+        $stmt_get_booking_info->close();
+
+        if ($booking_info && ($booking_info['status'] == 'Selesai' || $booking_info['status'] == 1) && $booking_info['pelanggan_id'] !== NULL) {
+            $pelanggan_id_to_decrement = $booking_info['pelanggan_id'];
+            $points_per_wash = 10; // Points to decrement
+            $stmt_decrement_loyalty = $conn->prepare("UPDATE loyalty_card SET total_cuci = GREATEST(0, total_cuci - 1), poin = GREATEST(0, poin - ?) WHERE pelanggan_id = ?");
+            $stmt_decrement_loyalty->bind_param("ii", $points_per_wash, $pelanggan_id_to_decrement);
+            $stmt_decrement_loyalty->execute();
+            $stmt_decrement_loyalty->close();
+        }
+
+        // Delete the booking from the 'booking' table
+        $stmt = $conn->prepare("DELETE FROM booking WHERE id = ?");
+        $stmt->bind_param("i", $id);
+
+        if ($stmt->execute()) {
+            echo json_encode(['success' => true, 'message' => 'Booking berhasil dihapus.']);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Gagal menghapus booking: ' . $conn->error]);
+        }
+        $stmt->close();
+    } else {
+        echo json_encode(['success' => false, 'message' => 'ID booking tidak valid.']);
+    }
+    $conn->close(); // Close connection after AJAX response
+    exit; // Stop script execution after handling AJAX request
+}
+
 
 // --- LOGIKA PENGAMBILAN DATA UNTUK DASHBOARD ---
 
@@ -123,6 +166,19 @@ while ($row = $layananListResult->fetch_assoc()) {
     $daftarLayanan[] = $row['nama'];
 }
 
+// Ambil semua event booking untuk kalender
+$events = [];
+$sql_events = "SELECT id, layanan, waktu, tanggal FROM booking";
+$result_events = $conn->query($sql_events);
+if ($result_events) {
+    while ($row = $result_events->fetch_assoc()) {
+        $events[] = $row;
+    }
+} else {
+    error_log("Error fetching calendar events: " . $conn->error);
+}
+
+$conn->close(); // Close the database connection after all operations
 ?>
 
 <!DOCTYPE html>
@@ -173,14 +229,14 @@ while ($row = $layananListResult->fetch_assoc()) {
         }
 
         /* Warna layanan custom */
-        .fc-event-cuci-eksterior { background-color: #00ff88ff; border-color: #ffffffff; } /* Biru */
-        .fc-event-cuci-interior { background-color: #f4ff2cff; border-color: #ffffffff; } /* Hijau */
-        .fc-event-detailing { background-color: #d5beffff; border-color: #ffffffff; } /* Oranye */
-        .fc-event-cuci-mobil { background-color: #ffffffff; border-color: #ffffffff; } /* Merah */
-        .fc-event-salon-mobil-kaca { background-color: #ffb080ff; border-color: #ffffffff; } /* Ungu */
-        .fc-event-perbaiki-mesin { background-color: #ffa6c2ff; border-color: #ffffffff; } /* Coklat */
-        .fc-event-default { background-color: #ff7676ff; border-color: #ffffffff; } /* Abu-abu default jika tidak ada match */
-        
+        .fc-event-cuci-eksterior { background-color: #214c4fff; border-color: #ffffff; color: #ffffff; }
+        .fc-event-cuci-interior { background-color: #092022ff; border-color: #ffffff; color: #ffffff; }
+        .fc-event-detailing { background-color: #bbfdffff; border-color: #ffffff; color: #343a40; }
+        .fc-event-cuci-mobil { background-color: #538f94ff; border-color: #ffffff; color: #ffffff; }
+        .fc-event-salon-mobil-kaca { background-color: #fdfeffff; border-color: #ffffff; color: #343a40; }
+        .fc-event-perbaiki-mesin { background-color: #696969ff; border-color: #ffffff; color: #ffffff; }
+        .fc-event-default { background-color: #cdcdcdff; border-color: #ffffff; color: #343a40; }
+
         /* Hilangkan padding yang tidak perlu */
         .fc-daygrid-day {
             padding: 0 !important;
@@ -338,8 +394,11 @@ while ($row = $layananListResult->fetch_assoc()) {
                             </button>
                         </div>
                         <div class="modal-body">
-                            </div>
+                            <!-- Content will be loaded here by JS -->
+                        </div>
                         <div class="modal-footer">
+                            <!-- The delete button will be dynamically added/removed by JS based on context -->
+                            <button type="button" class="btn btn-danger" id="hapusEventBtn">Hapus</button>
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                         </div>
                     </div>
@@ -373,14 +432,32 @@ while ($row = $layananListResult->fetch_assoc()) {
 <script src="AdminLTE-3.1.0/dist/js/pages/dashboard2.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
     // Pastikan variabel ini tersedia di JavaScript
     const daftarNama = <?= json_encode($daftarNama) ?>;
-    const daftarLayanan = <?= json_encode($daftarLayanan) ?>;
+    const daftarLayanan = <?= json_encode($daftarLayanan) ?>; 
+
+    let calendar; // agar bisa diakses global
+    let selectedEvent; // simpan event yang diklik
+
+    // Fungsi untuk mengelola event yang dihapus secara visual (disimpan di localStorage)
+    function getHiddenEventIds() {
+        return JSON.parse(localStorage.getItem('hiddenCalendarEvents') || '[]');
+    }
+
+    function addHiddenEventId(id) {
+        const hiddenIds = getHiddenEventIds();
+        if (!hiddenIds.includes(id)) {
+            hiddenIds.push(id);
+            localStorage.setItem('hiddenCalendarEvents', JSON.stringify(hiddenIds));
+        }
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
-        var calendar = new FullCalendar.Calendar(calendarEl, {
+        calendar = new FullCalendar.Calendar(calendarEl, { // Assign to global 'calendar' variable
             initialView: 'dayGridMonth',
             headerToolbar: {
                 left: 'prev,next today',
@@ -417,69 +494,100 @@ while ($row = $layananListResult->fetch_assoc()) {
                 `;
                 $('#bookingModal .modal-body').html(formHtml);
                 $('#bookingModalLabel').text('Tambah Booking Baru'); // Update modal title
+                $('#hapusEventBtn').hide(); // Hide delete button for new booking form
                 $('#bookingModal').modal('show');
 
                 // Submit form via AJAX
                 $('#formBooking').on('submit', function(e) {
                     e.preventDefault();
                     const data = $(this).serialize();
-                    $.post('admin.php', data, function(response) {
+                    $.post('admin.php', data, function (response) {
                         if (response.status === 'sukses') {
-                            alert(response.message); // Tampilkan pesan sukses
-                            $('#bookingModal').modal('hide');
-                            calendar.refetchEvents(); // Refresh event di kalender
+                            Swal.fire('Berhasil!', response.message, 'success').then(() => {
+                                $('#bookingModal').modal('hide');
+                                location.reload(); // Reload page to update calendar and stats
+                            });
                         } else {
-                            alert("Gagal: " + response.error);
+                            Swal.fire('Gagal!', "Gagal: " + response.error, 'error');
                         }
-                    }, 'json');
+                    }, 'json').fail(function(xhr, status, error) {
+                        Swal.fire('Error!', 'Terjadi kesalahan saat menyimpan booking: ' + error, 'error');
+                    });
                 });
             },
 
-            // Event dari database
             events: [
                 <?php
-                $sql = "SELECT nama, layanan, waktu, tanggal FROM booking"; // Ambil nama juga
-                $result = $conn->query($sql);
-                if ($result->num_rows > 0) {
-                    while ($row = $result->fetch_assoc()) {
-                        $layanan = strtolower(trim($row['layanan']));
-                        
-                        // Map layanan ke class warna
-                        $classMap = [
-                            'cuci eksterior' => 'fc-event-cuci-eksterior',
-                            'cuci interior' => 'fc-event-cuci-interior',
-                            'detailing' => 'fc-event-detailing',
-                            'cuci mobil' => 'fc-event-cuci-mobil',
-                            'salon mobil kaca' => 'fc-event-salon-mobil-kaca',
-                            'perbaiki mesin' => 'fc-event-perbaiki-mesin'
-                        ];
+                foreach ($events as $row) {
+                    // Determine class based on service name (case-insensitive)
+                    $serviceLower = strtolower($row['layanan']);
+                    $class = 'fc-event-default'; // Default class
 
-                        // Gunakan class default jika tidak ada di map
-                        $layananClass = isset($classMap[$layanan]) ? $classMap[$layanan] : 'fc-event-default';
-
-                        $start = $row['tanggal'] . 'T' . date('H:i:s', strtotime($row['waktu']));
-                        
-                        // Menambahkan nama ke title event
-                        echo "{ title: '" . htmlspecialchars($row['nama']) . " - " . htmlspecialchars($row['layanan']) . "', start: '" . $start . "', className: '" . $layananClass . "' },";
+                    if (stripos($serviceLower, 'cuci eksterior') !== false) {
+                        $class = 'fc-event-cuci-eksterior';
+                    } elseif (stripos($serviceLower, 'cuci interior') !== false) {
+                        $class = 'fc-event-cuci-interior';
+                    } elseif (stripos($serviceLower, 'detailing') !== false) {
+                        $class = 'fc-event-detailing';
+                    } elseif (stripos($serviceLower, 'cuci mobil') !== false) { // General car wash, put after specific ones
+                        $class = 'fc-event-cuci-mobil';
+                    } elseif (stripos($serviceLower, 'salon mobil kaca') !== false) {
+                        $class = 'fc-event-salon-mobil-kaca';
+                    } elseif (stripos($serviceLower, 'perbaiki mesin') !== false) {
+                        $class = 'fc-event-perbaiki-mesin';
                     }
+                    
+                    $start = $row['tanggal'] . 'T' . date('H:i:s', strtotime($row['waktu']));
+                    echo "{ id: '{$row['id']}', title: '{$row['layanan']}', start: '{$start}', className: '{$class}' },";
                 }
                 ?>
-            ],
+            ].filter(event => !getHiddenEventIds().includes(event.id)), // Filter events based on localStorage
 
-            // Klik event → buka modal detail
-            eventClick: function(info) {
-                $('#bookingModal .modal-body').html(
-                    '<strong>Nama:</strong> ' + info.event.title.split(' - ')[0] + // Ambil nama dari title
-                    '<br><strong>Layanan:</strong> ' + info.event.title.split(' - ')[1] + // Ambil layanan dari title
-                    '<br><strong>Tanggal:</strong> ' + info.event.start.toLocaleDateString() +
-                    '<br><strong>Waktu:</strong> ' + info.event.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                );
+            eventClick: function (info) {
+                selectedEvent = info.event; // Store the clicked event globally
+
+                $('#bookingModal .modal-body').html(`
+                    <strong>Layanan:</strong> ${info.event.title}<br>
+                    <strong>Waktu:</strong> ${info.event.start.toLocaleString()}
+                `);
                 $('#bookingModalLabel').text('Detail Booking'); // Update modal title
+                $('#hapusEventBtn').show(); // Show delete button for existing event
                 $('#bookingModal').modal('show');
             }
         });
 
         calendar.render();
+
+        // Handle delete button click in the modal
+        $('#hapusEventBtn').on('click', function () {
+            if (!selectedEvent) return; // Ensure an event is selected
+
+            Swal.fire({
+                title: 'Yakin ingin menghapus booking ini dari kalender?',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Ya, hapus dari kalender!',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Tambahkan ID event ke localStorage agar tidak muncul lagi setelah refresh
+                    addHiddenEventId(selectedEvent.id);
+                    // Hapus event dari tampilan kalender saja
+                    selectedEvent.remove();
+                    
+                    Swal.fire(
+                        'Dihapus!',
+                        'Booking berhasil dihapus dari kalender.',
+                        'success'
+                    ).then(() => {
+                        $('#bookingModal').modal('hide');
+                        // Tidak perlu reload halaman karena perubahan sudah persisten di localStorage
+                    });
+                }
+            });
+        });
     });
 </script>
 

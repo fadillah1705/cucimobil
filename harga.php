@@ -69,25 +69,31 @@ $services = $conn->query("SELECT * FROM services WHERE is_active = 1 ORDER BY pr
 
 
                     <!-- profile -->
-                    <?php if (isset($_SESSION['username'])): ?>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-person-circle"></i>
-                            Haii, <?php echo htmlspecialchars($_SESSION['username']); ?>!
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
-                            <li><a class="dropdown-item" href="profil.php">Lihat Profil</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="logout.php">Logout</a></li>
-                        </ul>
-                    </li>
-                    <?php else: ?>
-                    <li class="nav-item">
-                        <a class="nav-link" href="login.php">
-                            <i class="bi bi-box-arrow-in-right"></i> Login
-                        </a>
-                    </li>
-                    <?php endif; ?>
+                   <?php if (isset($_SESSION['username']) && $_SESSION['role'] !== 'guest'): ?>
+ <!--  tampilkan dropdown Profil + Logout.-->
+<li class="nav-item dropdown">
+<a class="nav-link dropdown-toggle" href="#" id="profileDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+  <i class="bi bi-person-circle"></i>
+  Haii, <?php echo htmlspecialchars($_SESSION['username']); ?>!
+</a>
+
+    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="profileDropdown">
+      <li><a class="dropdown-item" href="profil.php">Lihat Profil</a></li>
+      <li><hr class="dropdown-divider"></li>
+      <li><a class="dropdown-item" href="logout.php">Logout</a></li>
+    </ul>
+  </li>
+
+<?php else: ?>
+<!-- User belum login -->
+<!-- tampilkan tombol login -->
+  <li class="nav-item">
+    <a class="nav-link" href="login.php">
+      <i class="bi bi-box-arrow-in-right"></i> Login
+    </a>
+  </li>
+
+<?php endif; ?>
                 </ul>
             </div>
         </div>
@@ -120,7 +126,7 @@ $services = $conn->query("SELECT * FROM services WHERE is_active = 1 ORDER BY pr
             <p class="mb-1"><?= nl2br(htmlspecialchars($service['description'])) ?></p>
             <p class="text-muted">Menggunakan <?= htmlspecialchars($service['product_used']) ?></p>
 
-            <p class="text-muted mt-3">Harga sekali cuci</p>
+            <p class="text-muted mt-3">Harga (Rp)</p>
             <h5 class="fw-bold">Rp<?= number_format($service['price'], 0, ',', '.') ?></h5>
 
             <form action="wa.php" method="POST">

@@ -1,137 +1,140 @@
-
 <?php
-include "conn.php";
+session_start(); // Pastikan ini adalah baris pertama di file PHP!
+include "conn.php"; // Pastikan file koneksi database Anda bernama 'conn.php'
+
+$message = "";
+$swalScript = "";
 
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  // Mengambil input dari form bernama username, lalu menghapus spasi di awal dan akhir nilai tersebut.
-  $username = trim($_POST['username']);
-  $rawPassword = $_POST["password"];
+    // Mengambil input dari form, menghapus spasi di awal dan akhir nilai tersebut.
+    $username = trim($_POST['username'] ?? '');
+    $rawPassword = $_POST["password"] ?? '';
+    $inputRole = $_POST["role"] ?? 'user'; // Default role ke 'user' jika tidak ada input
 
-  // $inputRole = $_POST["role"] ?? '';
-
-  if (empty($username) || empty($rawPassword)) {
-
-    $message = "Semua field harus diisi.";
-  } else {
-    // Enkripsi password
-    $password = password_hash($rawPassword, PASSWORD_DEFAULT);
-
-  }
-}
-    // Cek apakah username sudah ada
-    // Kode ini membuat prepared statement untuk mencari apakah username tertentu sudah ada di tabel mencuci.
-    $check = $conn->prepare("SELECT id FROM mencuci WHERE username = ?");
-    // Ini mengikat nilai dari variabel $username ke placeholder ? yang ada di query SQL yang sebelumnya disiapkan.
-    $check->bind_param("s", $username);
-    $check->execute();
-    // store_result() digunakan untuk menyimpan hasil query dari statement yang dieksekusi ke dalam memori lokal, sehingga bisa diakses nanti — misalnya untuk menghitung jumlah baris hasil dengan num_rows.
-    $check->store_result();
-
-<<<<<<< HEAD
-  $sql = "INSERT INTO mencuci (username, password) VALUES (?, ? )";
-=======
-<<<<<<< HEAD
-// Menambahkan data username dan password ke tabel mencuci dengan cara yang aman menggunakan Prepared Statement.
-    // Ini adalah query SQL yang digunakan untuk menambahkan data baru ke dalam tabel mencuci.
-  $sql = "INSERT INTO mencuci (username, password) VALUES (?, ? )";
-  // Ini adalah langkah untuk menyiapkan (prepare) perintah SQL sebelum dijalankan, menggunakan Prepared Statement dari MySQLi.
-=======
-  $sql = "INSERT INTO users (username, password) VALUES (?, ? )";
->>>>>>> upstream/main
->>>>>>> fcdb753adb7ac9d98cd4ff82d4ae0abaff01391f
-  $stmt = $conn->prepare($sql);
-  // Baris ini mengisi placeholder (?) dalam query dengan nilai yang kamu punya.
-  // $username akan menggantikan tanda ? pertama.
-// $password akan menggantikan tanda ? kedua.
-  $stmt->bind_param("ss", $username, $password);
-
-
-  // Ini mengecek apakah data username yang diinputkan sudah ada di
-    if ($check->num_rows > 0) {
-      $message = "Username sudah digunakan. Silakan pilih yang lain.";
+    if (empty($username) || empty($rawPassword) || empty($inputRole)) {
+        $message = "Semua field harus diisi.";
     } else {
-<<<<<<< HEAD
-      //  menambahkan data pengguna baru ke dalam tabel mencuci.
-      $sql = "INSERT INTO mencuci (username, password, role) VALUES (?, ?, ?)";
-      // Kode ini digunakan untuk menyiapkan (prepare) query SQL yang sebelumnya sudah ditulis di variabel $sql, agar bisa dijalankan dengan prepared statement dari MySQLi.
-      $stmt = $conn->prepare($sql);
-      // Kode ini berfungsi untuk mengikat data (bind) ke query SQL yang sebelumnya sudah disiapkan dengan prepare().
-      $stmt->bind_param("sss", $username, $password, $inputRole);
-=======
-      // Simpan ke database
+        // Enkripsi password
+        $password = password_hash($rawPassword, PASSWORD_DEFAULT);
 
-      $sql = "INSERT INTO mencuci (username, password ) VALUES (?, ?)";
+        // Cek apakah username sudah ada
+        $check = $conn->prepare("SELECT id FROM mencuci WHERE username = ?");
+        $check->bind_param("s", $username);
+        $check->execute();
+        $check->store_result();
 
-      $stmt = $conn->prepare($sql);
-      $stmt->bind_param("ss", $username, $password);
->>>>>>> upstream/main
+        if ($check->num_rows > 0) {
+            $message = "Username sudah digunakan. Silakan pilih yang lain.";
+        } else {
+            // Menambahkan data pengguna baru ke dalam tabel mencuci
+            $sql = "INSERT INTO mencuci (username, password, role) VALUES (?, ?, ?)";
+            $stmt = $conn->prepare($sql);
+            $stmt->bind_param("sss", $username, $password, $inputRole);
 
-
-      // cek apakah eksekusinya berhasil atau tidak.
-      if ($stmt->execute()) {
-        echo "<script>
-          alert('Registrasi berhasil!');
-          window.location.href = 'login.php';
-        </script>";
-        exit();
-      } else {
-        $message = "Registrasi gagal: " . $stmt->error;
-      }
-
-      $stmt->close();
+            // Cek apakah eksekusinya berhasil atau tidak.
+            if ($stmt->execute()) {
+                $swalScript = "
+                    <script>
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Registrasi berhasil!',
+                            text: 'Anda sekarang bisa login.',
+                            confirmButtonText: 'OK'
+                        }).then(() => {
+                            window.location.href = 'login.php';
+                        });
+                    </script>";
+            } else {
+                $message = "Registrasi gagal: " . $stmt->error;
+            }
+            $stmt->close();
+        }
+        $check->close();
     }
+}
 
-    $check->close();
-  }
+// Tutup koneksi database setelah semua operasi selesai
+if (isset($conn)) {
+    $conn->close();
 }
 ?>
-
-
-      
-
-
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>Registrasi</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <title>Registrasi</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background-color: #f8f9fa; /* Light background */
+        }
+        .card {
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+        }
+        .btn-primary {
+            background-color: #3a9fa7; /* Menggunakan warna yang sama dengan login.php */
+            border-color: #3a9fa7;
+        }
+        .btn-primary:hover {
+            background-color: #2e8b92;
+            border-color: #2e8b92;
+        }
+    </style>
 </head>
 <body class="bg-light">
-  <div class="container mt-5">
-    <div class="row justify-content-center">
-      <div class="col-md-6">
-        <div class="card shadow p-4">
-          <h3 class="text-center mb-4">Registrasi Akun</h3>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-6 col-lg-4">
+                <div class="card shadow p-4">
+                    <h3 class="text-center mb-4 fw-bold" style="color: #3a9fa7;">Registrasi Akun</h3>
 
-          <?php if (!empty($message)): ?>
-            <div class="alert alert-danger"><?= $message ?></div>
-          <?php endif; ?>
-          
-          <form method="POST">
-          <div class="mb-3">
-    <label class="form-label">Role</label>
-    <select class="form-select" name="role" required>
-      <option value="">Pilih Role</option>
-      <option value="admin">Admin</option>
-      <option value="user">User</option>
-    </select>
-  </div>
+                    <?php if (!empty($message)): ?>
+                        <div class="alert alert-danger text-center mt-3 rounded-pill">
+                            <?= $message ?>
+                        </div>
+                    <?php endif; ?>
 
-            <div class="mb-3">
-              <label for="username" class="form-label">Username</label>
-              <input type="text" class="form-control" name="username" required>
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label for="role" class="form-label">Role</label>
+                            <select class="form-select rounded-pill" id="role" name="role" required>
+                                <option value="">Pilih Role</option>
+                                <option value="admin">Admin</option>
+                                <option value="user">User</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Username</label>
+                            <input type="text" class="form-control rounded-pill" id="username" name="username" required>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="password" class="form-label">Password</label>
+                            <input type="password" class="form-control rounded-pill" id="password" name="password" required>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100 rounded-pill mb-3">Daftar</button>
+                        <a href="index.php" class="btn btn-outline-secondary w-100 rounded-pill">Kembali ke beranda</a>
+                    </form>
+
+                    <div class="text-center mt-4">
+                        Sudah punya akun? <a href="login.php" class="text-decoration-none fw-bold" style="color: #3a9fa7;">Login di sini</a>
+                    </div>
+
+                </div>
             </div>
-            <div class="mb-3">
-              <label for="password" class="form-label">Password</label>
-              <input type="password" class="form-control" name="password" required>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Daftar</button>
-          </form>
         </div>
-      </div>
     </div>
-  </div>
+
+    <!-- SweetAlert Script -->
+    <?= $swalScript ?>
 </body>
 </html>
