@@ -3,7 +3,7 @@ session_start();
 require_once 'conn.php';
 
 // Cek apakah user adalah admin
-if ($_SESSION['role'] !== 'admin') {
+if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
     header('Location: login.php');
     exit;
 }
@@ -44,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Validasi ekstensi
             $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
             if (!in_array($extension, $allowedExt)) {
-                echo "Format gambar tidak didukung!";
+                echo "<script>Swal.fire('Gagal!', 'Format gambar tidak didukung!', 'error');</script>";
                 exit;
             }
 
@@ -52,18 +52,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (move_uploaded_file($tmpName, $destination)) {
                 $uploadedImagePath = $destination;
             } else {
-                echo "Gagal mengupload gambar.";
+                echo "<script>Swal.fire('Gagal!', 'Gagal mengupload gambar.', 'error');</script>";
                 exit;
             }
         } else {
-            echo "Gambar tidak ditemukan atau terjadi error upload.";
+            echo "<script>Swal.fire('Gagal!', 'Gambar tidak ditemukan atau terjadi error upload.', 'error');</script>";
             exit;
         }
 
         // Insert ke database
         $stmt = $conn->prepare("INSERT INTO layanan (name, image, description, product_used, price) VALUES (?, ?, ?, ?, ?)");
         if (!$stmt) {
-            echo "Gagal prepare statement: " . $conn->error;
+            echo "<script>Swal.fire('Error!', 'Gagal prepare statement: " . $conn->error . "', 'error');</script>";
             exit;
         }
         
@@ -79,7 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: admin-harga.php?success=added");
             exit;
         } else {
-            echo "Gagal menambahkan layanan: " . $stmt->error;
+            echo "<script>Swal.fire('Gagal!', 'Gagal menambahkan layanan: " . $stmt->error . "', 'error');</script>";
         }
 
     // ================================
@@ -87,20 +87,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ================================
     } elseif (isset($_POST['update_service'])) {
         $id = $_POST['id'];
-        $uploadedImagePath = $editService['image'] ?? ''; // Default: pakai gambar lama
+        $uploadedImagePath = $_POST['current_image_path'] ?? ''; // Default: pakai gambar lama dari hidden input
 
         // Jika gambar baru diupload
-        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+        if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK && $_FILES['image']['size'] > 0) {
             $tmpName = $_FILES['image']['tmp_name'];
             $originalName = basename($_FILES['image']['name']);
             $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
             $newName = uniqid('service_', true) . '.' . $extension;
             $destination = $uploadDir . $newName;
 
+            $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
+            if (!in_array($extension, $allowedExt)) {
+                echo "<script>Swal.fire('Gagal!', 'Format gambar tidak didukung!', 'error');</script>";
+                exit;
+            }
+
             if (move_uploaded_file($tmpName, $destination)) {
+                // Hapus gambar lama jika ada dan berbeda dengan yang baru
+                if (!empty($uploadedImagePath) && file_exists($uploadedImagePath) && $uploadedImagePath !== $destination) {
+                    unlink($uploadedImagePath);
+                }
                 $uploadedImagePath = $destination;
             } else {
-                echo "Gagal mengupload gambar.";
+                echo "<script>Swal.fire('Gagal!', 'Gagal mengupload gambar baru.', 'error');</script>";
                 exit;
             }
         }
@@ -119,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header("Location: admin-harga.php?success=updated");
             exit;
         } else {
-            echo "Gagal update layanan: " . $stmt->error;
+            echo "<script>Swal.fire('Gagal!', 'Gagal update layanan: " . $stmt->error . "', 'error');</script>";
         }
 
     // ================================
@@ -142,19 +152,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ================================
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
+
     $stmt = $conn->prepare("DELETE FROM layanan WHERE id = ?");
-    $stmt->bind_param("i", $id);
+
+    
+    // Ambil path gambar sebelum menghapus record
+    $stmt_get_image = $conn->prepare("SELECT image FROM services WHERE id = ?");
+    $stmt_get_image->bind_param("i", $id);
+    $stmt_get_image->execute();
+    $result_image = $stmt_get_image->get_result();
+    $image_path_to_delete = $result_image->fetch_assoc()['image'] ?? null;
+    $stmt_get_image->close();
+
+    
 
     if ($stmt->execute()) {
+        // Hapus file gambar dari server
+        if (!empty($image_path_to_delete) && file_exists($image_path_to_delete)) {
+            unlink($image_path_to_delete);
+        }
         header("Location: admin-harga.php?success=deleted");
         exit;
     } else {
-        echo "<script>alert('Gagal menghapus layanan');</script>";
+        echo "<script>Swal.fire('Gagal!', 'Gagal menghapus layanan: " . $stmt->error . "', 'error');</script>";
     }
 } elseif (isset($_GET['activate'])) {
     $stmt = $conn->prepare("UPDATE layanan SET is_active = 1 WHERE id = ?");
     $stmt->bind_param("i", $_GET['activate']);
     $stmt->execute();
+    header("Location: admin-harga.php?success=activated");
+    exit;
 }
 
 // Ambil semua data layanan
@@ -166,34 +193,44 @@ $services = $conn->query("SELECT * FROM layanan ORDER BY is_active DESC, nama");
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Admin | Dashboard 2</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Admin | Kelola Layanan</title>
 
-  <!-- Google Font: Source Sans Pro -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
-  <!-- Font Awesome Icons -->
-  <link rel="stylesheet" href="AdminLTE-3.1.0/plugins/fontawesome-free/css/all.min.css">
-  <!-- overlayScrollbars -->
-  <link rel="stylesheet" href="AdminLTE-3.1.0/plugins/overlayScrollbars/css/OverlayScrollbars.min.css">
-  <!-- Theme style -->
-  <link rel="stylesheet" href="AdminLTE-3.1.0/dist/css/adminlte.min.css">
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-  <!-- Bootstrap Icons -->
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-  <style>
-    .status-badge {
-      cursor: pointer;
-      transition: all 0.3s;
-    }
-    .status-badge:hover {
-      opacity: 0.8;
-      transform: scale(1.05);
-    }
-  </style>
+    <!-- Google Font: Source Sans Pro -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="AdminLTE-3.1.0/plugins/fontawesome-free/css/all.min.css">
+    <!-- overlayScrollbars -->
+    <link rel="stylesheet" href="AdminLTE-3.1.0/plugins/overlayScrollbars/css/OverlayScrollbars.min.css">
+    <!-- Theme style -->
+    <link rel="stylesheet" href="AdminLTE-3.1.0/dist/css/adminlte.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        .status-badge {
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .status-badge:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+        /* Tambahan style untuk gambar di tabel */
+        .service-table-img {
+            width: 60px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+    </style>
 </head>
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed dark-mode">
 <div class="wrapper">
+
 
   <!-- Preloader -->
   <div class="preloader flex-column justify-content-center align-items-center">
@@ -292,9 +329,95 @@ $services = $conn->query("SELECT * FROM layanan ORDER BY is_active DESC, nama");
         <div class="card mb-5">
             <div class="card-header">
                 <h5><?= isset($_GET['edit']) ? 'Edit' : 'Tambah' ?> Layanan</h5>
+
+    <!-- Preloader -->
+    <div class="preloader flex-column justify-content-center align-items-center">
+        <img class="animation__wobble" src="AdminLTE-3.1.0/dist/img/AdminLTELogo.png" alt="AdminLTELogo" height="60" width="60">
+    </div>
+
+    <!-- Main Sidebar Container -->
+    <aside class="main-sidebar sidebar-dark-primary elevation-4">
+        <!-- Brand Logo -->
+        <a href="admin.php" class="brand-link">
+            <img src="AdminLTE-3.1.0/dist/img/AdminLTELogo.png" alt="AdminLTE Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+            <span class="brand-text font-weight-light">AdminGoWash</span>
+        </a>
+
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <!-- Sidebar user panel (optional) -->
+            <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+                <div class="image">
+                    <img src="AdminLTE-3.1.0/dist/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
+                </div>
+                <div class="info">
+                    <a href="#" class="d-block"><?= htmlspecialchars($_SESSION['username']) ?></a>
+                </div>
+
             </div>
-            <div class="card-body">
-               <?php 
+
+            <!-- SidebarSearch Form -->
+            <div class="form-inline">
+                <div class="input-group" data-widget="sidebar-search">
+                    <input class="form-control form-control-sidebar" type="search" placeholder="Search" aria-label="Search">
+                    <div class="input-group-append">
+                        <button class="btn btn-sidebar">
+                            <i class="fas fa-search fa-fw"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar Menu -->
+            <nav class="mt-2">
+                <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+                    <li class="nav-item">
+                        <a href="admin.php" class="nav-link">
+                            <i class="far fa-circle nav-icon"></i>
+                            <p>Dashboard</p>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a href="AdminLTE-3.1.0/tab_booking.php" class="nav-link">
+                            <i class="nav-icon fas fa-th"></i>
+                            <p>
+                            Booking
+                            </p>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a href="admin-harga.php" class="nav-link active">
+                            <i class="nav-icon fas fa-chart-pie"></i>
+                            <p>
+                            Layanan
+                            </p>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="logout.php" class="nav-link ">
+                            <i class="nav-icon fas fa-sign-out-alt"></i>
+                            <p>Logout</p>
+                        </a>
+                    </li>     
+                </ul>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- Content Wrapper -->
+    <div class="content-wrapper">
+        <div class="container py-3">
+            <h1 class="text-center mb-5 ">Kelola Layanan</h1>
+            
+            <!-- Form Tambah/Edit Layanan -->
+            <div class="card mb-5">
+                <div class="card-header">
+                    <h5><?= isset($_GET['edit']) ? 'Edit' : 'Tambah' ?> Layanan</h5>
+                </div>
+                <div class="card-body">
+                   <?php 
 $editService = null;
 if (isset($_GET['edit'])): 
     $editId = intval($_GET['edit']);
@@ -311,12 +434,14 @@ $editMode = is_array($editService);
 <form method="POST" enctype="multipart/form-data">
     <?php if ($editMode): ?>
         <input type="hidden" name="id" value="<?= htmlspecialchars($editService['id']) ?>">
+        <!-- Tambahkan hidden input untuk path gambar saat ini -->
+        <input type="hidden" name="current_image_path" value="<?= htmlspecialchars($editService['image']) ?>">
     <?php endif; ?>
 
     <div class="mb-3">
         <label for="name" class="form-label">Nama Layanan</label>
         <input type="text" class="form-control" id="name" name="name" 
-               value="<?= $editMode ? htmlspecialchars($editService['name']) : '' ?>" required>
+                value="<?= $editMode ? htmlspecialchars($editService['name']) : '' ?>" required>
     </div>
 
     <!-- Upload Gambar -->
@@ -324,11 +449,11 @@ $editMode = is_array($editService);
         <label for="image" class="form-label">Foto Layanan</label>
         <input type="file" class="form-control" id="image" name="image" accept="image/*" <?= $editMode ? '' : 'required' ?>>
         <?php if ($editMode && !empty($editService['image'])): ?>
-    <div class="mt-2">
-        <img src="/<?= htmlspecialchars($editService['image']) ?>" alt="Preview" width="100" class="rounded-circle">
-    </div>
-<?php endif; ?>
-
+            <div class="mt-2">
+                <p class="mb-1">Gambar saat ini:</p>
+                <img src="<?= htmlspecialchars($editService['image']) ?>" alt="Preview" class="service-table-img">
+            </div>
+        <?php endif; ?>
     </div>
 
     <div class="mb-3">
@@ -340,29 +465,25 @@ $editMode = is_array($editService);
     <div class="mb-3">
         <label for="product_used" class="form-label">Produk Digunakan</label>
         <input type="text" class="form-control" id="product_used" name="product_used" 
-               value="<?= $editMode ? htmlspecialchars($editService['product_used']) : '' ?>" required>
+                value="<?= $editMode ? htmlspecialchars($editService['product_used']) : '' ?>" required>
     </div>
 
     <div class="mb-3">
-        <label for="price" class="form-label">Harga (Rp)</label>
+        <label for="price" class="form-label">Harga</label> <!-- Label diubah dari "Harga (Rp)" menjadi "Harga" -->
         <input type="number" class="form-control" id="price" name="price" 
-               value="<?= $editMode ? htmlspecialchars($editService['price']) : '' ?>" required>
+                value="<?= $editMode ? htmlspecialchars($editService['price']) : '' ?>" required>
     </div>
 
     <button type="submit" name="<?= $editMode ? 'update_service' : 'add_service' ?>" class="btn btn-primary">
         <?= $editMode ? 'Update' : 'Tambah' ?> Layanan
     </button>
+    <?php if ($editMode): ?>
+        <a href="admin-harga.php" class="btn btn-secondary">Batal</a>
+    <?php endif; ?>
 </form>
-
-
-                    
-                    
-                    
-                    <?php if (isset($_GET['edit'])): ?>
-                        <a href="admin-harga.php" class="btn btn-secondary">Batal</a>
-                    <?php endif; ?>
-                </form>
+                </div>
             </div>
+
         </div>
         
         <!-- Daftar Layanan -->
@@ -406,100 +527,172 @@ $editMode = is_array($editService);
                             <?php else: ?>
                                 <a href="admin-harga.php?activate=<?= $service['id'] ?>" class="btn btn-sm btn-success">
                                     <i class="bi bi-check-circle"></i>
+
+            
+            <!-- Daftar Layanan -->
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Nama Layanan</th>
+                            <th>Foto</th>
+                            <th>Deskripsi</th>
+                            <th>Produk</th>
+                            <th>Harga</th>
+                            <th>Status</th>
+                            <th>Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($services as $service): ?>
+                        <tr>
+                            <td><?= htmlspecialchars($service['name']) ?></td>
+                            <td>
+                                <!-- Menampilkan gambar layanan -->
+                                <img src="<?= htmlspecialchars($service['image']) ?>" alt="Gambar Layanan" class="service-table-img">
+                            </td>
+                            <td><?= nl2br(htmlspecialchars($service['description'])) ?></td>
+                            <td><?= htmlspecialchars($service['product_used']) ?></td>
+                            <td>Rp<?= number_format($service['price'], 0, ',', '.') ?></td>
+                            <td>
+                                <span class="badge status-badge bg-<?= $service['is_active'] ? 'success' : 'danger' ?>" 
+                                        data-id="<?= $service['id'] ?>">
+                                    <?= $service['is_active'] ? 'Aktif' : 'Nonaktif' ?>
+                                </span>
+                            </td>
+                            <td>
+                                <a href="admin-harga.php?edit=<?= $service['id'] ?>" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-pencil"></i>
+
                                 </a>
-                            <?php endif; ?>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                                <?php if ($service['is_active']): ?>
+                                    <a href="#" class="btn btn-sm btn-danger" onclick="confirmDelete(<?= $service['id'] ?>)">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                <?php else: ?>
+                                    <a href="admin-harga.php?activate=<?= $service['id'] ?>" class="btn btn-sm btn-success">
+                                        <i class="bi bi-check-circle"></i>
+                                    </a>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
-  </div>
 
-  <!-- REQUIRED SCRIPTS -->
-  <script src="AdminLTE-3.1.0/plugins/jquery/jquery.min.js"></script>
-  <script src="AdminLTE-3.1.0/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
-  <script src="AdminLTE-3.1.0/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
-  <script src="AdminLTE-3.1.0/dist/js/adminlte.js"></script>
+    <!-- REQUIRED SCRIPTS -->
+    <script src="AdminLTE-3.1.0/plugins/jquery/jquery.min.js"></script>
+    <script src="AdminLTE-3.1.0/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="AdminLTE-3.1.0/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
+    <script src="AdminLTE-3.1.0/dist/js/adminlte.js"></script>
 
-  <script>
-    function confirmDelete(serviceId) {
-  Swal.fire({
-    title: 'Hapus Layanan?',
-    text: 'Layanan akan dihapus secara permanen.',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#d33',
-    cancelButtonColor: '#6c757d',
-    confirmButtonText: 'Hapus',
-    cancelButtonText: 'Batal'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      window.location.href = `admin-harga.php?delete=${serviceId}`;
-    }
-  });
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-  // Tangani klik pada badge status
-  document.querySelectorAll('.status-badge').forEach(badge => {
-    badge.addEventListener('click', function(e) {
-      e.preventDefault();
-
-      const serviceId = this.getAttribute('data-id');
-      const isCurrentlyActive = this.classList.contains('bg-success');
-      const newStatus = isCurrentlyActive ? 0 : 1;
-      const badgeElement = this;
-
-      // Gunakan SweetAlert untuk konfirmasi
-      Swal.fire({
-        title: 'Konfirmasi',
-        text: `Anda yakin ingin ${isCurrentlyActive ? 'menonaktifkan' : 'mengaktifkan'} layanan ini?`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonText: 'Ya',
-        cancelButtonText: 'Batal',
-        confirmButtonColor: '#28a745',
-        cancelButtonColor: '#d33'
-      }).then((result) => {
-        if (result.isConfirmed) {
-          const formData = new FormData();
-          formData.append('update_status', true);
-          formData.append('id', serviceId);
-          formData.append('status', newStatus);
-
-          fetch(window.location.href, {
-            method: 'POST',
-            body: formData
-          })
-          .then(response => response.json())
-          .then(data => {
-            if(data.success) {
-              // Update tampilan
-              badgeElement.classList.toggle('bg-success');
-              badgeElement.classList.toggle('bg-danger');
-              badgeElement.textContent = newStatus ? 'Aktif' : 'Nonaktif';
-
-              Swal.fire('Berhasil', 'Status berhasil diubah', 'success');
-            } else {
-              Swal.fire('Gagal', 'Gagal mengubah status', 'error');
-            }
-          })
-          .catch(error => {
-            console.error('Error:', error);
-            Swal.fire('Error', 'Terjadi kesalahan saat mengubah status', 'error');
-          });
+    <script>
+        function confirmDelete(serviceId) {
+            Swal.fire({
+                title: 'Hapus Layanan?',
+                text: 'Layanan akan dihapus secara permanen.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Hapus',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    window.location.href = `admin-harga.php?delete=${serviceId}`;
+                }
+            });
         }
-      });
-    });
-  });
-});
-</script>
 
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tangani klik pada badge status
+            document.querySelectorAll('.status-badge').forEach(badge => {
+                badge.addEventListener('click', function(e) {
+                    e.preventDefault();
 
-  <!-- SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                    const serviceId = this.getAttribute('data-id');
+                    const isCurrentlyActive = this.classList.contains('bg-success');
+                    const newStatus = isCurrentlyActive ? 0 : 1;
+                    const badgeElement = this;
+
+                    // Gunakan SweetAlert untuk konfirmasi
+                    Swal.fire({
+                        title: 'Konfirmasi',
+                        text: `Anda yakin ingin ${isCurrentlyActive ? 'menonaktifkan' : 'mengaktifkan'} layanan ini?`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya',
+                        cancelButtonText: 'Batal',
+                        confirmButtonColor: '#28a745',
+                        cancelButtonColor: '#d33'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const formData = new FormData();
+                            formData.append('update_status', true);
+                            formData.append('id', serviceId);
+                            formData.append('status', newStatus);
+
+                            fetch(window.location.href, {
+                                method: 'POST',
+                                body: formData
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if(data.success) {
+                                    // Update tampilan
+                                    badgeElement.classList.toggle('bg-success');
+                                    badgeElement.classList.toggle('bg-danger');
+                                    badgeElement.textContent = newStatus ? 'Aktif' : 'Nonaktif';
+
+                                    Swal.fire('Berhasil', 'Status berhasil diubah', 'success');
+                                } else {
+                                    Swal.fire('Gagal', 'Gagal mengubah status', 'error');
+                                }
+                            })
+                            .catch(error => {
+                                console.error('Error:', error);
+                                Swal.fire('Error', 'Terjadi kesalahan saat mengubah status', 'error');
+                            });
+                        }
+                    });
+                });
+            });
+
+            // Tampilkan SweetAlert untuk pesan sukses dari redirect
+            const urlParams = new URLSearchParams(window.location.search);
+            const successType = urlParams.get('success');
+            if (successType) {
+                let message = '';
+                let title = '';
+                switch (successType) {
+                    case 'added':
+                        title = 'Layanan Ditambahkan!';
+                        message = 'Layanan baru berhasil ditambahkan.';
+                        break;
+                    case 'updated':
+                        title = 'Layanan Diperbarui!';
+                        message = 'Informasi layanan berhasil diperbarui.';
+                        break;
+                    case 'deleted':
+                        title = 'Layanan Dihapus!';
+                        message = 'Layanan berhasil dihapus secara permanen.';
+                        break;
+                    case 'activated':
+                        title = 'Layanan Diaktifkan!';
+                        message = 'Layanan berhasil diaktifkan kembali.';
+                        break;
+                }
+                if (message) {
+                    Swal.fire(title, message, 'success');
+                    // Hapus parameter 'success' dari URL agar SweetAlert tidak muncul lagi saat refresh
+                    history.replaceState({}, document.title, window.location.pathname);
+                }
+            }
+        });
+    </script>
 
 </body>
 </html>

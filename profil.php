@@ -133,10 +133,11 @@ $loyalty = $result->fetch_assoc();
 
 $totalCuci = $loyalty['total_cuci'] ?? 0;
 $poin = $loyalty['poin'] ?? 0;
-$terakhirCuci = $loyalty['terakhir_cuci'] ?? '-';
+// $terakhirCuci = $loyalty['terakhir_cuci'] ?? '-'; // This line is now effectively superseded for display
 
 // Ambil semua tanggal booking yang sudah selesai
 $bookingDates = [];
+// Order by tanggal DESC to easily get the latest if needed, though ASC is fine for the loop
 $stmtDates = $conn->prepare("SELECT tanggal FROM booking WHERE pelanggan_id = ? AND status = 'Selesai' ORDER BY tanggal ASC");
 if ($stmtDates === false) {
     die("Error preparing booking dates statement: " . $conn->error);
@@ -147,6 +148,14 @@ $resultDates = $stmtDates->get_result();
 while ($row = $resultDates->fetch_assoc()) {
     $bookingDates[] = $row['tanggal'];
 }
+
+// Determine the latest wash date for display, prioritizing actual completed bookings
+$displayTerakhirCuci = '-';
+if (!empty($bookingDates)) {
+    // Since bookingDates is ordered ASC, the last element is the latest.
+    $displayTerakhirCuci = end($bookingDates);
+}
+
 
 // Tentukan gambar profil yang akan ditampilkan
 if (!empty($foto) && file_exists("uploads/$foto")) {
@@ -295,7 +304,15 @@ if (!empty($foto) && file_exists("uploads/$foto")) {
             <h4 class="text-center text-white"><strong>LOYALTY CARD</strong></h4>
             <p><strong>Total Cuci :</strong> <?= (int)$totalCuci ?> kali</p>
             <p><strong>Poin :</strong> <span class="badge bg-warning text-dark"><?= (int)$poin ?> Poin</span></p>
-            <p><strong>Terakhir Cuci :</strong> <?= htmlspecialchars($terakhirCuci) ?></p>
+            <p><strong>Terakhir Cuci :</strong>
+                <?php
+                if ($displayTerakhirCuci !== '-') { // Use the new variable for display
+                    echo htmlspecialchars(date('d F Y', strtotime($displayTerakhirCuci)));
+                } else {
+                    echo '<em>~Belum ada cuci terakhir~</em>';
+                }
+                ?>
+            </p>
 
             <div class="d-flex flex-wrap justify-content-center mt-3">
                 <?php for ($i = 0; $i < 5; $i++):
