@@ -10,32 +10,42 @@ if (!isset($_SESSION['username'])) {
 }
 
 // --- Logika untuk MENANGANI PENYIMPANAN BOOKING dari form modal (via AJAX) ---
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama'], $_POST['layanan'], $_POST['tanggal'], $_POST['waktu'])) {
-    header('Content-Type: application/json'); // Penting untuk respons AJAX
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama'], $_POST['id_service'], $_POST['tanggal'], $_POST['waktu'])) {
+    header('Content-Type: application/json');
 
-    $nama = $conn->real_escape_string($_POST['nama']);
-    $layanan = $conn->real_escape_string($_POST['layanan']);
-    $tanggal = $conn->real_escape_string($_POST['tanggal']);
-    $waktu = $conn->real_escape_string($_POST['waktu']);
-    
-    $pelanggan_id = NULL; // Default NULL
+    $nama       = $conn->real_escape_string($_POST['nama']);
+    $id_service = intval($_POST['id_service']); // ← langsung ID, bukan nama layanan
+    $tanggal    = $conn->real_escape_string($_POST['tanggal']);
+    $waktu      = $conn->real_escape_string($_POST['waktu']);
 
-    // Opsional: Coba cari pelanggan_id berdasarkan username di tabel mencuci
-    $sql_get_pelanggan_id = "SELECT id FROM mencuci WHERE username = ?";
-    $stmt_get_pelanggan_id = $conn->prepare($sql_get_pelanggan_id);
-    if ($stmt_get_pelanggan_id) {
-        $stmt_get_pelanggan_id->bind_param("s", $nama); // Asumsi nama di form booking cocok dengan username di mencuci
-        $stmt_get_pelanggan_id->execute();
-        $result_pelanggan = $stmt_get_pelanggan_id->get_result();
-        if ($result_pelanggan->num_rows > 0) {
-            $pelanggan_data = $result_pelanggan->fetch_assoc();
-            $pelanggan_id = $pelanggan_data['id'];
-        }
-        $stmt_get_pelanggan_id->close();
+    $pelanggan_id = NULL;
+
+    // Ambil pelanggan_id berdasarkan nama (username)
+    $stmt_get_pelanggan_id = $conn->prepare("SELECT id FROM users WHERE username = ?");
+    $stmt_get_pelanggan_id->bind_param("s", $nama);
+    $stmt_get_pelanggan_id->execute();
+    $result_pelanggan = $stmt_get_pelanggan_id->get_result();
+    if ($result_pelanggan->num_rows > 0) {
+        $pelanggan_data = $result_pelanggan->fetch_assoc();
+        $pelanggan_id = $pelanggan_data['id'];
+    }
+    $stmt_get_pelanggan_id->close();
+
+    // ✅ Validasi apakah ID layanan benar-benar ada
+    $stmt_check_service = $conn->prepare("SELECT id FROM services WHERE id = ?");
+    $stmt_check_service->bind_param("i", $id_service);
+    $stmt_check_service->execute();
+    $result_service = $stmt_check_service->get_result();
+
+    if ($result_service->num_rows === 0) {
+        echo json_encode(['status' => 'gagal', 'error' => 'ID layanan tidak valid atau tidak ditemukan.']);
+        exit;
     }
 
+    $stmt_check_service->close();
 
-    $sql_insert = "INSERT INTO booking (pelanggan_id, nama, layanan, tanggal, waktu) VALUES (?, ?, ?, ?, ?)";
+    // Simpan booking
+    $sql_insert = "INSERT INTO booking (pelanggan_id, nama, id_service, tanggal, waktu, status) VALUES (?, ?, ?, ?, ?, 'Menunggu')";
     $stmt = $conn->prepare($sql_insert);
 
     if ($stmt === false) {
@@ -43,8 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama'], $_POST['layan
         exit;
     }
 
-    // Perhatikan urutan dan tipe data: "issss" -> i untuk int (pelanggan_id), s untuk string lainnya
-    $stmt->bind_param("issss", $pelanggan_id, $nama, $layanan, $tanggal, $waktu); 
+    $stmt->bind_param("isiss", $pelanggan_id, $nama, $id_service, $tanggal, $waktu);
 
     if ($stmt->execute()) {
         echo json_encode(['status' => 'sukses', 'message' => 'Booking berhasil disimpan!']);
@@ -54,8 +63,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama'], $_POST['layan
 
     $stmt->close();
     $conn->close();
-    exit; // Penting untuk menghentikan eksekusi PHP setelah mengirim respons JSON
+    exit;
 }
+
+
+
+
 
 // --- LOGIKA PENGAMBILAN DATA UNTUK DASHBOARD ---
 
@@ -70,7 +83,7 @@ $data = $result->fetch_assoc();
 $totalBooking = $data['total_booking'];
 
 // Ambil jumlah total user (role='user')
-$userQuery = "SELECT COUNT(*) AS total_user FROM mencuci WHERE role='user'";
+$userQuery = "SELECT COUNT(*) AS total_user FROM users WHERE role='user'";
 $userResult = $conn->query($userQuery);
 if ($userResult === false) {
     echo "Error dalam query total user: " . $conn->error;
@@ -100,7 +113,7 @@ $todayData = $todayResult->fetch_assoc();
 $bookingHariIni = $todayData['booking_hari_ini'];
 
 // TABEL KALENDER: Ambil daftar nama user (pelanggan) dari tabel mencuci
-$namaQuery = "SELECT DISTINCT username AS nama FROM mencuci ORDER BY username ASC"; // Menggunakan username sebagai nama
+$namaQuery = "SELECT DISTINCT username AS nama FROM users ORDER BY username ASC"; // Menggunakan username sebagai nama
 $namaResult = $conn->query($namaQuery);
 if ($namaResult === false) {
     echo "Error dalam query daftar nama: " . $conn->error;
@@ -112,7 +125,7 @@ while ($row = $namaResult->fetch_assoc()) {
 }
 
 // TABEL KALENDER: Ambil daftar nama layanan dari tabel layanan
-$layananListQuery = "SELECT nama FROM layanan ORDER BY nama ASC"; // Beri nama berbeda agar tidak konflik dengan $layananQuery sebelumnya
+$layananListQuery = "SELECT nama as name FROM layanan ORDER BY nama ASC"; // Beri nama berbeda agar tidak konflik dengan $layananQuery sebelumnya
 $layananListResult = $conn->query($layananListQuery);
 if ($layananListResult === false) {
     echo "Error dalam query daftar layanan: " . $conn->error;
@@ -120,8 +133,9 @@ if ($layananListResult === false) {
 }
 $daftarLayanan = [];
 while ($row = $layananListResult->fetch_assoc()) {
-    $daftarLayanan[] = $row['nama'];
+    $daftarLayanan[] = $row['name'];
 }
+
 
 ?>
 
@@ -247,6 +261,15 @@ while ($row = $layananListResult->fetch_assoc()) {
                             <p>Layanan</p>
                         </a>
                     </li>
+
+                    <li class="nav-item">
+                        <a href="kasir.php" class="nav-link">
+                            <i class="nav-icon fas fa-desktop"></i>
+                            <p>
+                                Kasir
+                            </p>
+                        </a>
+                    </li>
                     <li class="nav-item">
                         <a href="logout.php" class="nav-link">
                             <i class="nav-icon fas fa-sign-out-alt"></i>
@@ -358,6 +381,21 @@ while ($row = $layananListResult->fetch_assoc()) {
         </div>
     </footer>
 </div>
+<?php
+// Ambil data layanan dari database
+$daftarLayanan = [];
+$sqlLayanan = "SELECT id, nama FROM layanan";
+$resultLayanan = $conn->query($sqlLayanan);
+if ($resultLayanan->num_rows > 0) {
+    while ($row = $resultLayanan->fetch_assoc()) {
+        $daftarLayanan[] = $row;
+    }
+}
+
+// Ambil username dari session
+$username = $_SESSION['username'] ?? 'Guest';
+?>
+
 <script src="AdminLTE-3.1.0/plugins/jquery/jquery.min.js"></script>
 <script src="AdminLTE-3.1.0/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="AdminLTE-3.1.0/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
@@ -374,9 +412,9 @@ while ($row = $layananListResult->fetch_assoc()) {
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
 <script>
-    // Pastikan variabel ini tersedia di JavaScript
-    const daftarNama = <?= json_encode($daftarNama) ?>;
+    // Kirim data PHP ke JS
     const daftarLayanan = <?= json_encode($daftarLayanan) ?>;
+    const username = <?= json_encode($username) ?>;
 
     document.addEventListener('DOMContentLoaded', function() {
         var calendarEl = document.getElementById('calendar');
@@ -388,23 +426,21 @@ while ($row = $layananListResult->fetch_assoc()) {
                 right: 'dayGridMonth,timeGridWeek,timeGridDay'
             },
 
-            // Fitur klik tanggal untuk menambah booking
+            // Klik tanggal → tampilkan form booking
             dateClick: function(info) {
                 const tanggal = info.dateStr;
+
                 const formHtml = `
                     <form id="formBooking">
                         <div class="form-group">
                             <label>Nama</label>
-                            <select name="nama" class="form-control" required>
-                                <option value="">-- Pilih Nama --</option>
-                                ${daftarNama.map(n => `<option value="${n}">${n}</option>`).join('')}
-                            </select>
+                            <input type="text" name="nama" class="form-control" value="${username}" required>
                         </div>
                         <div class="form-group">
                             <label>Layanan</label>
-                            <select name="layanan" class="form-control" required>
+                            <select name="id_service" class="form-control" required>
                                 <option value="">-- Pilih Layanan --</option>
-                                ${daftarLayanan.map(l => `<option value="${l}">${l}</option>`).join('')}
+                                ${daftarLayanan.map(l => `<option value="${l.id}">${l.name}</option>`).join('')}
                             </select>
                         </div>
                         <div class="form-group">
@@ -415,19 +451,20 @@ while ($row = $layananListResult->fetch_assoc()) {
                         <button type="submit" class="btn btn-primary mt-2">Simpan</button>
                     </form>
                 `;
+
                 $('#bookingModal .modal-body').html(formHtml);
-                $('#bookingModalLabel').text('Tambah Booking Baru'); // Update modal title
+                $('#bookingModalLabel').text('Tambah Booking Baru');
                 $('#bookingModal').modal('show');
 
-                // Submit form via AJAX
-                $('#formBooking').on('submit', function(e) {
+                $(document).off('submit', '#formBooking').on('submit', '#formBooking', function(e) {
                     e.preventDefault();
                     const data = $(this).serialize();
+
                     $.post('admin.php', data, function(response) {
                         if (response.status === 'sukses') {
-                            alert(response.message); // Tampilkan pesan sukses
+                            alert(response.message);
                             $('#bookingModal').modal('hide');
-                            calendar.refetchEvents(); // Refresh event di kalender
+                            calendar.refetchEvents();
                         } else {
                             alert("Gagal: " + response.error);
                         }
@@ -438,43 +475,43 @@ while ($row = $layananListResult->fetch_assoc()) {
             // Event dari database
             events: [
                 <?php
-                $sql = "SELECT nama, layanan, waktu, tanggal FROM booking"; // Ambil nama juga
+                $sql = "SELECT b.id, b.nama, b.id_service, s.name as nama_layanan, b.waktu, b.tanggal, b.status
+                        FROM booking b
+                        JOIN services s ON b.id_service = s.id";
                 $result = $conn->query($sql);
                 if ($result->num_rows > 0) {
                     while ($row = $result->fetch_assoc()) {
-                        $layanan = strtolower(trim($row['layanan']));
-                        
-                        // Map layanan ke class warna
+                        $layanan = strtolower(trim($row['nama_layanan']));
                         $classMap = [
+                            'detailing' => 'fc-event-detailing',
                             'cuci eksterior' => 'fc-event-cuci-eksterior',
                             'cuci interior' => 'fc-event-cuci-interior',
-                            'detailing' => 'fc-event-detailing',
                             'cuci mobil' => 'fc-event-cuci-mobil',
-                            'salon mobil kaca' => 'fc-event-salon-mobil-kaca',
-                            'perbaiki mesin' => 'fc-event-perbaiki-mesin'
+                            'perbaiki mesin' => 'fc-event-perbaiki-mesin',
+                            'salon mobil kaca' => 'fc-event-salon-mobil-kaca'
                         ];
-
-                        // Gunakan class default jika tidak ada di map
-                        $layananClass = isset($classMap[$layanan]) ? $classMap[$layanan] : 'fc-event-default';
-
+                        $layananClass = $classMap[$layanan] ?? 'fc-event-default';
                         $start = $row['tanggal'] . 'T' . date('H:i:s', strtotime($row['waktu']));
-                        
-                        // Menambahkan nama ke title event
-                        echo "{ title: '" . htmlspecialchars($row['nama']) . " - " . htmlspecialchars($row['layanan']) . "', start: '" . $start . "', className: '" . $layananClass . "' },";
+                        echo "{ 
+                            id: '{$row['id']}',
+                            title: '" . htmlspecialchars($row['nama']) . " - " . htmlspecialchars($row['nama_layanan']) . "', 
+                            start: '" . $start . "', 
+                            className: '" . $layananClass . "' 
+                        },";
                     }
                 }
                 ?>
             ],
 
-            // Klik event → buka modal detail
+            // Klik event untuk lihat detail
             eventClick: function(info) {
                 $('#bookingModal .modal-body').html(
-                    '<strong>Nama:</strong> ' + info.event.title.split(' - ')[0] + // Ambil nama dari title
-                    '<br><strong>Layanan:</strong> ' + info.event.title.split(' - ')[1] + // Ambil layanan dari title
+                    '<strong>Nama:</strong> ' + info.event.title.split(' - ')[0] +
+                    '<br><strong>Layanan:</strong> ' + info.event.title.split(' - ')[1] +
                     '<br><strong>Tanggal:</strong> ' + info.event.start.toLocaleDateString() +
                     '<br><strong>Waktu:</strong> ' + info.event.start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 );
-                $('#bookingModalLabel').text('Detail Booking'); // Update modal title
+                $('#bookingModalLabel').text('Detail Booking');
                 $('#bookingModal').modal('show');
             }
         });
@@ -482,6 +519,7 @@ while ($row = $layananListResult->fetch_assoc()) {
         calendar.render();
     });
 </script>
+
 
 </body>
 </html>

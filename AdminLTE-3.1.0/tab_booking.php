@@ -5,7 +5,7 @@ session_start();
 $host = "localhost";
 $user = "root";
 $pass = "";
-$db_cucimobil = "cucimobil"; // Assuming your database name is 'cucimobil'
+$db_cucimobil = "db_cucimobil"; // Assuming your database name is 'cucimobil'
 
 // Establish database connection
 $conn = new mysqli($host, $user, $pass, $db_cucimobil);
@@ -151,19 +151,19 @@ $selesaiData = $selesaiResult->fetch_assoc();
 $totalSelesai = $selesaiData['total_selesai'];
 
 // Ambil layanan terlaris
-$layananQuery = "SELECT layanan, COUNT(*) AS total_pesanan FROM booking GROUP BY layanan ORDER BY total_pesanan DESC LIMIT 1";
+$layananQuery = "SELECT id_layanan, COUNT(*) AS total_pesanan FROM booking GROUP BY id_layanan ORDER BY total_pesanan DESC LIMIT 1";
 $layananResult = $conn->query($layananQuery);
 $layananTerlarisData = $layananResult->fetch_assoc();
 
-$layananTerlaris = $layananTerlarisData ? $layananTerlarisData['layanan'] : '-';
+$layananTerlaris = $layananTerlarisData ? $layananTerlarisData['id_layanan'] : '-';
 $totalLayananTerlaris = $layananTerlarisData ? $layananTerlarisData['total_pesanan'] : 0;
 
 // Ambil layanan kurang diminati
-$layananKurangQuery = "SELECT layanan, COUNT(*) AS total_pesanan FROM booking GROUP BY layanan ORDER BY total_pesanan ASC LIMIT 1";
+$layananKurangQuery = "SELECT id_layanan, COUNT(*) AS total_pesanan FROM booking GROUP BY id_layanan ORDER BY total_pesanan ASC LIMIT 1";
 $layananKurangResult = $conn->query($layananKurangQuery);
 $layananKurangData = $layananKurangResult->fetch_assoc();
 
-$layananKurang = $layananKurangData ? $layananKurangData['layanan'] : '-';
+$layananKurang = $layananKurangData ? $layananKurangData['id_layanan'] : '-';
 $totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] : 0;
 
 $conn->close(); // Close the database connection after all operations
@@ -322,6 +322,15 @@ $conn->close(); // Close the database connection after all operations
                     </li>
 
                     <li class="nav-item">
+                        <a href="../kasir.php" class="nav-link">
+                            <i class="nav-icon fas fa-desktop"></i>
+                            <p>
+                                Kasir
+                            </p>
+                        </a>
+                    </li>
+
+                    <li class="nav-item">
                         <a href="../logout.php" class="nav-link">
                             <i class="nav-icon fas fa-sign-out-alt"></i>
                             <p>Logout</p>
@@ -412,8 +421,8 @@ $conn->close(); // Close the database connection after all operations
                             ?>
                                 <tr id="row-<?= $row['id'] ?>">
                                     <td><?= htmlspecialchars($row['id']) ?></td>
-                                    <td><?= htmlspecialchars($row['nama']) ?></td>
-                                    <td><?= htmlspecialchars($row['layanan']) ?></td>
+                                    <td><?= htmlspecialchars($row['pelanggan_id']) ?></td>
+                                    <td><?= htmlspecialchars($row['id_layanan']) ?></td>
                                     <td><?= date('H:i', strtotime($row['waktu'])) ?></td>
                                     <td><?= date('d-m-Y', strtotime(explode(' ', $row['tanggal'])[0])) ?></td>
                                     <td>

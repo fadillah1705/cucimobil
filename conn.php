@@ -3,7 +3,8 @@
 $servername = "localhost";
 $username_db = "root";
 $password_db = "";
-$dbname = "cucimobil";
+// $dbname = "cucimobil";
+$dbname = "db_cucimobil";
 
 $conn = new mysqli($servername, $username_db, $password_db, $dbname);
 

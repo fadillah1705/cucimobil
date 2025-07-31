@@ -12,7 +12,7 @@ if ($_SESSION['role'] !== 'admin') {
 $editService = null;
 if (isset($_GET['edit'])) {
     $id = intval($_GET['edit']);
-    $stmt = $conn->prepare("SELECT * FROM services WHERE id = ?");
+    $stmt = $conn->prepare("SELECT * FROM layanan WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -61,12 +61,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Insert ke database
-        $stmt = $conn->prepare("INSERT INTO services (name, image, description, product_used, price) VALUES (?, ?, ?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO layanan (name, image, description, product_used, price) VALUES (?, ?, ?, ?, ?)");
         if (!$stmt) {
             echo "Gagal prepare statement: " . $conn->error;
             exit;
         }
-
+        
         $stmt->bind_param("ssssd", 
             $_POST['name'],
             $uploadedImagePath,
@@ -105,7 +105,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $stmt = $conn->prepare("UPDATE services SET name = ?, image = ?, description = ?, product_used = ?, price = ? WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE layanan SET name = ?, image = ?, description = ?, product_used = ?, price = ? WHERE id = ?");
         $stmt->bind_param("ssssdi", 
             $_POST['name'], 
             $uploadedImagePath,
@@ -129,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = $_POST['id'];
         $newStatus = $_POST['status'];
 
-        $stmt = $conn->prepare("UPDATE services SET is_active = ? WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE layanan SET is_active = ? WHERE id = ?");
         $stmt->bind_param("ii", $newStatus, $id);
 
         echo json_encode(['success' => $stmt->execute()]);
@@ -142,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ================================
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
-    $stmt = $conn->prepare("DELETE FROM services WHERE id = ?");
+    $stmt = $conn->prepare("DELETE FROM layanan WHERE id = ?");
     $stmt->bind_param("i", $id);
 
     if ($stmt->execute()) {
@@ -152,13 +152,13 @@ if (isset($_GET['delete'])) {
         echo "<script>alert('Gagal menghapus layanan');</script>";
     }
 } elseif (isset($_GET['activate'])) {
-    $stmt = $conn->prepare("UPDATE services SET is_active = 1 WHERE id = ?");
+    $stmt = $conn->prepare("UPDATE layanan SET is_active = 1 WHERE id = ?");
     $stmt->bind_param("i", $_GET['activate']);
     $stmt->execute();
 }
 
 // Ambil semua data layanan
-$services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name");
+$services = $conn->query("SELECT * FROM layanan ORDER BY is_active DESC, nama");
 ?>
 
 
@@ -264,6 +264,14 @@ $services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name")
             </p>
           </a>
         </li>
+        <li class="nav-item">
+                        <a href="kasir.php" class="nav-link">
+                            <i class="nav-icon fas fa-desktop"></i>
+                            <p>
+                                Kasir
+                            </p>
+                        </a>
+                    </li>
         <li class="nav-item">
           <a href="logout.php" class="nav-link ">
             <i class="nav-icon fas fa-sign-out-alt"></i>
@@ -374,7 +382,7 @@ $editMode = is_array($editService);
                 <tbody>
                     <?php foreach ($services as $service): ?>
                     <tr>
-                        <td><?= htmlspecialchars($service['name']) ?></td>
+                        <td><?= htmlspecialchars($service['nama']) ?></td>
                         <td>
   <img src="/ft-cucimobil/<?= htmlspecialchars($service['image']) ?>" alt="Gambar Layanan" width="60" height="60" style="object-fit: cover; border-radius: 8px;">
 </td>
