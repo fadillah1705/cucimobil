@@ -1,118 +1,66 @@
 <?php
 session_start();
-// mengecek apakah user sudah login
+
 if (!isset($_SESSION['username'])) {
-//kalo belum akan di arahkab ke halaman login 
     header("Location: login.php");
     exit;
 }
+
 include 'conn.php';
 
-// Mengambil username pengguna yang sedang login dari data sesi.
-// Mengambil username dari session dan menyimpannya di $oldUsername.
 $oldUsername = $_SESSION['username'];
-// membuat sebuah variabel bernama $namaLengkap dan $gender dan memberikan nilai awal berupa string kosong ('').
 $namaLengkap = '';
 $gender = '';
 
-//  mengambil data nama_lengkap dan gender dari tabel mencuci berdasarkan username.
-$stmt = $conn->prepare("SELECT nama_lengkap, gender FROM mencuci WHERE username = ?");
-// Kamu sedang mengisi tanda tanya ? dalam query SQL dengan nilai dari variabel $oldUsername.
+$stmt = $conn->prepare("SELECT nama_lengkap, gender FROM users WHERE username = ?");
 $stmt->bind_param("s", $oldUsername);
-// Menjalankan perintah SQL yang sudah dipersiapkan
 $stmt->execute();
-// Mengambil hasil dari query yang sudah dieksekusi sebelumnya, dan menyimpannya ke dalam variabel $result.
 $result = $stmt->get_result();
-// Mengecek apakah hasil query dari database berisi data atau tidak.
-// > 0
-// Kita cek: apakah jumlah datanya lebih dari nol?
-// berarti ada data yang ditemukan.
+
 if ($result->num_rows > 0) {
-// Mengambil satu baris data hasil query dari database, dan menyimpannya dalam bentuk array asosiatif
-// Array asosiatif adalah array yang menggunakan nama (key) untuk mengakses nilainya, bukan angka indeks seperti array biasa.s
     $userData = $result->fetch_assoc();
-// Mengambil data dari array asosiatif di $userData (yang berasal dari database) dan menyimpannya ke dalam variabel biasa ($namaLengkap dan $gender) untuk digunakan lebih mudah di tempat lain.
-// mengambil data dari array $userData, lalu menyimpannya ke dalam dua variabel: $namalengkap dan $ gender
     $namaLengkap = $userData['nama_lengkap'];
     $gender = $userData['gender'];
 }
 $stmt->close();
 
-
-// $_SERVER['REQUEST_METHOD'] adalah variabel superglobal yang menyimpan jenis request HTTP dari browser.
-// === digunakan untuk membandingkan secara identik, memastikan nilainya benar-benar "POST" (string).
-// Mengecek apakah halaman saat ini dipanggil melalui permintaan POST, biasanya saat form disubmit.
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-//Mengambil nilai dari input form bernama nama_lengkap dan gender, jika ada, dan kalau tidak ada (belum diisi atau error), maka nilainya jadi string kosong (''). 
     $namaLengkap = $_POST['nama_lengkap'] ?? '';
     $gender = $_POST['gender'] ?? '';
-
-// kalau tidak ada, pakai username lama ($oldUsername). 
     $newUsername = $_POST['username'] ?? $oldUsername;
-// mengambil file gambar yang diunggah lewat form, dan menyimpannya ke variabel $foto
-    $foto = $_FILES['foto'] ?? null;
-// Jika file tidak diunggah atau input tidak ada, maka variabel $foto akan bernilai null.
+    $foto = $_FILES['foto'] ?? null; // Keep this, even if not used in this form, it's safer for future expansion
     $fotoName = null;
 
-// Proses upload foto jika ada
-// Baris ini mengecek apakah ada file yang diunggah dan apakah upload-nya berhasil tanpa error.
+    // This section for foto upload logic is present but commented out/not used in the HTML form.
+    // If you plan to add foto upload to this page, uncomment and adjust the HTML.
+    /*
     if ($foto && $foto['error'] === UPLOAD_ERR_OK) {
-//Mengambil ekstensi file dari nama file yang diupload dan simpan di variabel $ext. CONTOH emsit.jpg, emsit.png
         $ext = pathinfo($foto['name'], PATHINFO_EXTENSION);
-// Membuat nama file foto yang unik berdasarkan:
-// Username baru ($newUsername)
-// Timestamp saat ini (time())
-// Ekstensi file ($ext)
-//Tujuannya : Menghindari nama file kembar jika user upload file dengan nama yang sama (misalnya foto.jpg)
         $fotoName = $newUsername . "_" . time() . "." . $ext;
-// Memindahkan file sementara hasil upload ke folder permanen (uploads/) dengan nama yang sudah ditentukan.
         move_uploaded_file($foto['tmp_name'], "uploads/$fotoName");
     }
+    */
 
-    // Query ini akan mengubah data di tabel mencuci, tepatnya: nama lengkap,gender dan username
-    $sql = "UPDATE mencuci SET nama_lengkap = ?, gender = ?, username = ?" . 
-//  !empty($fotoName) :Mengecek apakah variabel $fotoName tidak kosong.
-// Kalau $fotoName tidak kosong, tambahkan , foto = ?
-// Kalau kosong, tidak usah menambahkan apapun (hasilnya "")
-           (!empty($fotoName) ? ", foto = ?" : "") . 
-//  Menentukan baris mana yang ingin diupdate berdasarkan username, hanya username saja ynag di ubah MENGGUNAKAN WHERA AGAR YANG LAIN TIDAK IKUT KE UBAH
+    $sql = "UPDATE users SET nama_lengkap = ?, gender = ?, username = ?" .
+           (!empty($fotoName) ? ", foto = ?" : "") . // This part will always be false unless foto upload is enabled
            " WHERE username = ?";
 
-    // Bangun parameter binding
-    //Artinya kamu akan mengirim 3 parameter ke query,masing masing bertipe string 
     $types = "sss";
     $params = [$namaLengkap, $gender, $newUsername];
 
-    // Untuk menambahkan parameter fotoName ke dalam query SQL jika file foto memang di-upload.
-    // Mengecek apakah variabel $fotoName tidak kosong (berarti ada file yang di-upload).
-    if (!empty($fotoName)) {
-      // Menambahkan satu huruf "s" ke variabel $types.,pertama kan cuman 3 sekarang tambah 1 lagi
+    if (!empty($fotoName)) { // This condition will only be true if a file was uploaded and processed
         $types .= "s";
- // Menambahkan nilai $fotoName ke akhir array $params.
-//  $params adalah array berisi data yang akan di-bind (ikat) ke query SQL.
         $params[] = $fotoName;
     }
 
-
-    // Menambahkan huruf "s" ke akhir string $types.
-    // .= adalah operator penggabung string
-    $types .= "s"; // old username
-    //Menambahkan nilai dari $oldUsername ke akhir array $params. 
+    $types .= "s";
     $params[] = $oldUsername;
 
-    // Eksekusi query
-    // prepare() digunakan untuk mencegah SQL Injection dan membuat query jadi lebih aman.
-// fungsi untuk menyiapkan perintah SQL sebelum dijalankan. 
     $stmt = $conn->prepare($sql);
-    // Mengikat (bind) nilai-nilai parameter ke query SQL yang sudah disiapkan sebelumnya menggunakan prepare().
-    // Operator ... disebut spread operator. Ini artinya elemen-elemen dalam array $params akan "dipecah satu per satu".
     $stmt->bind_param($types, ...$params);
-    // Menjalankan query SQL 
     $stmt->execute();
     $stmt->close();
 
-    // Update session username jika berhasil
-    // Menyimpan username baru ke dalam session
     $_SESSION['username'] = $newUsername;
 
     header("Location: profil.php");
@@ -120,146 +68,181 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 
-
-
-
-
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <title>Lengkapi Profil</title>
-  <link rel="stylesheet" href="style.css">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <meta charset="UTF-8">
+    <title>Lengkapi Profil</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-  <style>
-        html {
-        background-color: rgba(241, 245, 254, 1); /* Ini warna abu-abu kebiruan terang seperti di gambar profil sebelumnya */
-        /* Atau jika Anda ingin warna yang sama dengan yang Anda sebutkan di chat: */
-    }
+    <style>
+        :root {
+            --primary-blue: #3A9FA7; 
+            --dark-blue: #1e1e4c; 
+            --light-blue: #70D8DF; 
+            --orange: #FFC107; 
+            --green: #28a745; 
+            --red: #dc3545; 
+            --white: #ffffff;
+            --light-gray: #f2f7f9; 
+            --medium-gray: #6c757d;
+            --text-dark: #343a40;
+            --text-light: #fefefe;
+            --bg-gradient-start: #e0f2f7; 
+            --bg-gradient-end: #cbedf6; 
+            --card-bg-light: #fefeff; 
+            --profile-label-color: #555; 
+        }
 
-    body {
-        background-color: transparent; /* Pastikan body transparan agar warna html terlihat */
-        /* Atau jika Anda ingin body memiliki warna sendiri, Anda bisa tetap menentukannya di sini */
-        /* background-color: white; */ /* Contoh: untuk membuat area kartu putih tetap menonjol */
-        min-height: 100vh; /* Penting agar html mengisi seluruh viewport jika konten pendek */
-        display: flex; /* Menggunakan flexbox untuk memposisikan kartu di tengah */
-        justify-content: center;
-        align-items: center;
-        padding: 20px; /* Padding agar kartu tidak terlalu mepet ke tepi */
-    }
-/* ---------- Container & Card ---------- */
-.container {
-  animation: fadeIn 0.8s ease-in-out;
-}
+        html { 
+            background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+            min-height: 100vh;
+        }
+        body { 
+            background-color: transparent; 
+            min-height: 100vh; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            padding: 20px; 
+            font-family: 'Poppins', sans-serif;
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        .card { 
+            border-radius: 25px; 
+            background: var(--card-bg-light); 
+            padding: 35px; 
+            box-shadow: 0 18px 50px rgba(0,0,0,0.15); 
+            border: none;
+            overflow: hidden; 
+            position: relative;
+            z-index: 1;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at top left, rgba(58, 159, 167, 0.04) 10%, transparent 40%),
+                        radial-gradient(circle at bottom right, rgba(200, 230, 240, 0.06) 10%, transparent 40%);
+            transform: rotate(15deg);
+            z-index: -1;
+            opacity: 0.8;
+        }
 
-.card {
-  border-radius: 20px;
-  border: none;
-  background: linear-gradient(145deg, #ffffff, #c7ffffff);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-  padding: 30px 25px;
-}
+        /* Judul */
+        .card h4 {
+            font-weight: 800; /* Lebih tebal dari bold */
+            color: var(--primary-blue);
+            font-family: 'Poppins', sans-serif;
+            text-align: center; /* Pastikan judul di tengah */
+            margin-bottom: 2rem; /* Tambah jarak bawah */
+        }
 
-/* ---------- Judul ---------- */
-.card h4 {
-  font-weight: bold;
-  color: rgb(58, 159, 167);
-  font-family: 'Poppins', sans-serif;
-}
+        /* Label & Input */
+        .form-label {
+            font-weight: 600; /* Sedikit lebih tebal */
+            color: var(--text-dark); /* Mengikuti warna teks utama */
+            font-family: 'Poppins', sans-serif;
+            margin-bottom: 0.5rem; /* Jarak antara label dan input */
+        }
 
-/* ---------- Label & Input ---------- */
-.form-label {
-  font-weight: 500;
-  color: #495057;
-}
+        .form-control,
+        .form-select {
+            border-radius: 12px; /* Disesuaikan dengan gaya umum */
+            border: 1px solid #c3e3e5;
+            background-color: var(--white);
+            transition: all 0.3s ease; /* Transisi lebih halus */
+            font-family: 'Poppins', sans-serif;
+            padding: 0.75rem 1rem; /* Padding yang lebih baik */
+        }
 
-.form-control,
-.form-select {
-  border-radius: 12px;
-  border: 1px solid #c3e3e5;
-  background-color: #ffffff;
-  transition: 0.3s ease;
-}
+        .form-control:focus,
+        .form-select:focus {
+            box-shadow: 0 0 0 0.25rem rgba(58, 159, 167, 0.25); /* Gaya focus Bootstrap 5 */
+            border-color: var(--primary-blue);
+            outline: 0; /* Hapus outline default */
+        }
 
-.form-control:focus,
-.form-select:focus {
-  box-shadow: 0 0 6px rgba(58, 159, 167, 0.4);
-  border-color: rgb(58, 159, 167);
-}
+        /* Buttons */
+        .btn {
+            border-radius: 12px; /* Disesuaikan dengan profil.php */
+            font-weight: 700; /* Disesuaikan dengan profil.php */
+            padding: 14px 28px; /* Disesuaikan dengan profil.php */
+            transition: all 0.3s ease-in-out;
+            letter-spacing: 0.7px; 
+            text-transform: uppercase;
+        }
 
-/* ---------- Button ---------- */
-.btn {
-  border-radius: 15px;
-  font-weight: 500;
-  padding: 10px;
-  font-family: 'Poppins', sans-serif;
-  transition: 0.3s ease;
-}
+        .btn-primary { /* untuk tombol Simpan */
+            background-color: var(--primary-blue);
+            border-color: var(--primary-blue);
+            box-shadow: 0 6px 15px rgba(58, 159, 167, 0.4); 
+        }
+        .btn-primary:hover {
+            background-color: #318a91;
+            border-color: #318a91;
+            transform: translateY(-5px) scale(1.02); 
+            box-shadow: 0 10px 20px rgba(58, 159, 167, 0.5);
+        }
 
-.btn[type="submit"] {
-  background-color: rgb(58, 159, 167);
-  color: white;
-  border: none;
-}
+        .btn-secondary { /* untuk tombol Batal */
+            background-color: var(--medium-gray);
+            border-color: var(--medium-gray);
+            box-shadow: 0 6px 15px rgba(108, 117, 125, 0.3);
+        }
+        .btn-secondary:hover {
+            background-color: #5a6268;
+            border-color: #5a6268;
+            transform: translateY(-5px) scale(1.02);
+            box-shadow: 0 10px 20px rgba(108, 117, 125, 0.4);
+        }
 
-.btn[type="submit"]:hover {
-  background-color: rgb(45, 134, 140);
-}
-
-.btn[href] {
-  background-color: #adb5bd;
-  color: white;
-  border: none;
-}
-
-.btn[href]:hover {
-  background-color: #8e959b;
-}
-
-/* ---------- Animasi Fade ---------- */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-  </style>
+        /* Animasi Fade */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
 
 <div class="container mt-5">
-  <div class="card mx-auto p-4 shadow-sm" style="max-width: 500px;">
-    <h4 class="mb-4 text-center">Lengkapi Profil</h4>
+    <div class="card mx-auto p-4" style="max-width: 500px;">
+        <h4 class="mb-4">Lengkapi Profil</h4>
 
-    <form method="POST" enctype="multipart/form-data">
-    <div class="mb-3">
-  <label for="username" class="form-label">Username Baru</label>
-  <input type="text" class="form-control" name="username" value="<?= htmlspecialchars($oldUsername) ?>" required>
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="username" class="form-label">Username Baru</label>
+                <input type="text" class="form-control" name="username" value="<?= htmlspecialchars($oldUsername) ?>" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="nama_lengkap" class="form-label">Nama Lengkap</label>
+                <input type="text" class="form-control" id="nama_lengkap" name="nama_lengkap"
+                        value="<?= htmlspecialchars($namaLengkap) ?>" required>
+            </div>
+
+            <div class="mb-3">
+                <label for="gender" class="form-label">Jenis Kelamin</label>
+                <select class="form-select" name="gender" id="gender" required>
+                    <option value="" disabled <?= $gender == '' ? 'selected' : '' ?>>-- Pilih --</option>
+                    <option value="Pria" <?= $gender == 'Pria' ? 'selected' : '' ?>>Pria</option>
+                    <option value="Wanita" <?= $gender == 'Wanita' ? 'selected' : '' ?>>Wanita</option>
+                </select>
+            </div>
+
+
+            <div class="d-grid gap-2 mt-4"> <button type="submit" class="btn btn-primary">Simpan</button>
+                <a href="profil.php" class="btn btn-secondary">Batal</a>
+            </div>
+        </form>
+    </div>
 </div>
 
-      <div class="mb-3">
-  <label for="nama_lengkap" class="form-label">Nama Lengkap</label>
-  <input type="text" class="form-control" id="nama_lengkap" name="nama_lengkap"
-         value="<?= htmlspecialchars($namaLengkap) ?>" required>
-</div>
-
-<div class="mb-3">
-  <label for="gender" class="form-label">Jenis Kelamin</label>
-  <select class="form-select" name="gender" id="gender" required>
-    <option value="" disabled <?= $gender == '' ? 'selected' : '' ?>>-- Pilih --</option>
-    <option value="Pria" <?= $gender == 'Pria' ? 'selected' : '' ?>>Pria</option>
-    <option value="Wanita" <?= $gender == 'Wanita' ? 'selected' : '' ?>>Wanita</option>
-  </select>
-</div>
-
-
-      <div class="d-grid gap-2">
-
-         <a href="pw.php" class="btn">Ubah Password</a>
-        <a href="profil.php" class="btn">Batal</a>
-       <button type="submit" class="btn">Simpan</button>
-      </div>
-    </form>
-  </div>
-</div>
-
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 <?php
 session_start();
-require_once 'conn.php';
+require_once 'conn.php'; // Pastikan file koneksi database Anda benar
 
 // Cek apakah user adalah admin
 if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
@@ -9,20 +9,20 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 }
 
 // Ambil data layanan untuk edit
-$editService = null;
+$editlayan = null;
 if (isset($_GET['edit'])) {
     $id = intval($_GET['edit']);
-    $stmt = $conn->prepare("SELECT * FROM services WHERE id = ?");
+    $stmt = $conn->prepare("SELECT * FROM layanan WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $result = $stmt->get_result();
-    $editService = $result->fetch_assoc();
+    $editlayan = $result->fetch_assoc();
 }
 
 // Handle CRUD operations
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Lokasi penyimpanan gambar
-    $uploadDir = 'img/services/';
+    $uploadDir = 'img/layanan/';
     if (!is_dir($uploadDir)) {
         mkdir($uploadDir, 0777, true); // Buat folder jika belum ada
     }
@@ -30,16 +30,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ================================
     // === TAMBAH LAYANAN BARU
     // ================================
-    if (isset($_POST['add_service'])) {
+    if (isset($_POST['add_layan'])) {
         $uploadedImagePath = '';
 
         // Upload gambar
         if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
-            $tmpName = $_FILES['image']['tmp_name'];
-            $originalName = basename($_FILES['image']['name']);
-            $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-            $newName = uniqid('service_', true) . '.' . $extension;
-            $destination = $uploadDir . $newName;
+            $tmpnama = $_FILES['image']['tmp_name']; // Menggunakan 'tmp_name' bukan 'tmp_nama'
+            $originalnama = basename($_FILES['image']['name']); // Menggunakan 'name' bukan 'nama'
+            $extension = strtolower(pathinfo($originalnama, PATHINFO_EXTENSION));
+            $newnama = uniqid('layan_', true) . '.' . $extension;
+            $destination = $uploadDir . $newnama;
 
             // Validasi ekstensi
             $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
@@ -49,7 +49,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Pindahkan file
-            if (move_uploaded_file($tmpName, $destination)) {
+            if (move_uploaded_file($tmpnama, $destination)) {
                 $uploadedImagePath = $destination;
             } else {
                 echo "<script>Swal.fire('Gagal!', 'Gagal mengupload gambar.', 'error');</script>";
@@ -61,14 +61,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Insert ke database
-        $stmt = $conn->prepare("INSERT INTO services (name, image, description, product_used, price) VALUES (?, ?, ?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO layanan (nama, image, description, product_used, price) VALUES (?, ?, ?, ?, ?)");
         if (!$stmt) {
             echo "<script>Swal.fire('Error!', 'Gagal prepare statement: " . $conn->error . "', 'error');</script>";
             exit;
         }
 
-        $stmt->bind_param("ssssd", 
-            $_POST['name'],
+        $stmt->bind_param("ssssd",
+            $_POST['nama'],
             $uploadedImagePath,
             $_POST['description'],
             $_POST['product_used'],
@@ -85,17 +85,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ================================
     // === UPDATE LAYANAN
     // ================================
-    } elseif (isset($_POST['update_service'])) {
+    } elseif (isset($_POST['update_layan'])) {
         $id = $_POST['id'];
         $uploadedImagePath = $_POST['current_image_path'] ?? ''; // Default: pakai gambar lama dari hidden input
 
         // Jika gambar baru diupload
         if (isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK && $_FILES['image']['size'] > 0) {
-            $tmpName = $_FILES['image']['tmp_name'];
-            $originalName = basename($_FILES['image']['name']);
-            $extension = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-            $newName = uniqid('service_', true) . '.' . $extension;
-            $destination = $uploadDir . $newName;
+            $tmpnama = $_FILES['image']['tmp_name']; // Menggunakan 'tmp_name'
+            $originalnama = basename($_FILES['image']['name']); // Menggunakan 'name'
+            $extension = strtolower(pathinfo($originalnama, PATHINFO_EXTENSION));
+            $newnama = uniqid('layan_', true) . '.' . $extension;
+            $destination = $uploadDir . $newnama;
 
             $allowedExt = ['jpg', 'jpeg', 'png', 'webp'];
             if (!in_array($extension, $allowedExt)) {
@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
 
-            if (move_uploaded_file($tmpName, $destination)) {
+            if (move_uploaded_file($tmpnama, $destination)) {
                 // Hapus gambar lama jika ada dan berbeda dengan yang baru
                 if (!empty($uploadedImagePath) && file_exists($uploadedImagePath) && $uploadedImagePath !== $destination) {
                     unlink($uploadedImagePath);
@@ -115,13 +115,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $stmt = $conn->prepare("UPDATE services SET name = ?, image = ?, description = ?, product_used = ?, price = ? WHERE id = ?");
-        $stmt->bind_param("ssssdi", 
-            $_POST['name'], 
+        $stmt = $conn->prepare("UPDATE layanan SET nama = ?, image = ?, description = ?, product_used = ?, price = ? WHERE id = ?");
+        $stmt->bind_param("ssssdi",
+            $_POST['nama'],
             $uploadedImagePath,
-            $_POST['description'], 
-            $_POST['product_used'], 
-            $_POST['price'], 
+            $_POST['description'],
+            $_POST['product_used'],
+            $_POST['price'],
             $id
         );
 
@@ -139,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = $_POST['id'];
         $newStatus = $_POST['status'];
 
-        $stmt = $conn->prepare("UPDATE services SET is_active = ? WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE layanan SET is_active = ? WHERE id = ?");
         $stmt->bind_param("ii", $newStatus, $id);
 
         echo json_encode(['success' => $stmt->execute()]);
@@ -152,16 +152,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ================================
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
-    
+
     // Ambil path gambar sebelum menghapus record
-    $stmt_get_image = $conn->prepare("SELECT image FROM services WHERE id = ?");
+    $stmt_get_image = $conn->prepare("SELECT image FROM layanan WHERE id = ?");
     $stmt_get_image->bind_param("i", $id);
     $stmt_get_image->execute();
     $result_image = $stmt_get_image->get_result();
     $image_path_to_delete = $result_image->fetch_assoc()['image'] ?? null;
     $stmt_get_image->close();
 
-    $stmt = $conn->prepare("DELETE FROM services WHERE id = ?");
+    $stmt = $conn->prepare("DELETE FROM layanan WHERE id = ?");
     $stmt->bind_param("i", $id);
 
     if ($stmt->execute()) {
@@ -175,7 +175,7 @@ if (isset($_GET['delete'])) {
         echo "<script>Swal.fire('Gagal!', 'Gagal menghapus layanan: " . $stmt->error . "', 'error');</script>";
     }
 } elseif (isset($_GET['activate'])) {
-    $stmt = $conn->prepare("UPDATE services SET is_active = 1 WHERE id = ?");
+    $stmt = $conn->prepare("UPDATE layanan SET is_active = 1 WHERE id = ?");
     $stmt->bind_param("i", $_GET['activate']);
     $stmt->execute();
     header("Location: admin-harga.php?success=activated");
@@ -183,10 +183,13 @@ if (isset($_GET['delete'])) {
 }
 
 // Ambil semua data layanan
-$services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name");
+$layanan_result = $conn->query("SELECT * FROM layanan ORDER BY is_active DESC, nama");
+if (!$layanan_result) {
+    // Query failed, output the MySQL error and stop execution
+    die("Error fetching layanan data: " . $conn->error);
+}
+$layanan = $layanan_result->fetch_all(MYSQLI_ASSOC); // Fetch all rows as an associative array
 ?>
-
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -195,20 +198,15 @@ $services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name")
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Admin | Kelola Layanan</title>
 
-    <!-- Google Font: Source Sans Pro -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
-    <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="AdminLTE-3.1.0/plugins/fontawesome-free/css/all.min.css">
-    <!-- overlayScrollbars -->
     <link rel="stylesheet" href="AdminLTE-3.1.0/plugins/overlayScrollbars/css/OverlayScrollbars.min.css">
-    <!-- Theme style -->
     <link rel="stylesheet" href="AdminLTE-3.1.0/dist/css/adminlte.min.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
-    <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+        /* Custom CSS untuk menyesuaikan warna dan tampilan */
         .status-badge {
             cursor: pointer;
             transition: all 0.3s;
@@ -217,34 +215,83 @@ $services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name")
             opacity: 0.8;
             transform: scale(1.05);
         }
-        /* Tambahan style untuk gambar di tabel */
-        .service-table-img {
+        .layan-table-img {
             width: 60px;
             height: 60px;
             object-fit: cover;
             border-radius: 8px;
+        }
+
+        /* ==== Kustomisasi Warna Tambahan ==== */
+        /* Contoh: Mengubah warna tombol update/tambah menjadi biru langit */
+        .btn-primary-custom {
+            background-color: #00BFFF; /* Deep Sky Blue */
+            border-color: #00BFFF;
+            color: white;
+        }
+        .btn-primary-custom:hover {
+            background-color: #009ACD; /* Slightly darker */
+            border-color: #009ACD;
+        }
+
+        /* Contoh: Mengubah warna tombol edit menjadi ungu */
+        .btn-warning-custom {
+            background-color: #8A2BE2; /* Blue Violet */
+            border-color: #8A2BE2;
+            color: white;
+        }
+        .btn-warning-custom:hover {
+            background-color: #6A1BA8; /* Darker Blue Violet */
+            border-color: #6A1BA8;
+        }
+
+        /* Contoh: Mengubah warna tombol delete menjadi merah tua */
+        .btn-danger-custom {
+            background-color: #DC143C; /* Crimson */
+            border-color: #DC143C;
+            color: white;
+        }
+        .btn-danger-custom:hover {
+            background-color: #B20C2D; /* Darker Crimson */
+            border-color: #B20C2D;
+        }
+
+        /* Contoh: Mengubah warna tombol activate menjadi hijau gelap */
+        .btn-success-custom {
+            background-color: #228B22; /* Forest Green */
+            border-color: #228B22;
+            color: white;
+        }
+        .btn-success-custom:hover {
+            background-color: #156615; /* Darker Forest Green */
+            border-color: #156615;
+        }
+
+        /* Contoh: Mengubah warna badge aktif menjadi hijau kebiruan */
+        .badge-success-custom {
+            background-color: #20B2AA !important; /* Light Sea Green */
+        }
+
+        /* Contoh: Mengubah warna badge nonaktif menjadi abu-abu gelap */
+        .badge-danger-custom {
+            background-color: #696969 !important; /* Dim Gray */
         }
     </style>
 </head>
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed dark-mode">
 <div class="wrapper">
 
-    <!-- Preloader -->
     <div class="preloader flex-column justify-content-center align-items-center">
         <img class="animation__wobble" src="AdminLTE-3.1.0/dist/img/AdminLTELogo.png" alt="AdminLTELogo" height="60" width="60">
     </div>
 
-    <!-- Main Sidebar Container -->
     <aside class="main-sidebar sidebar-dark-primary elevation-4">
-        <!-- Brand Logo -->
         <a href="admin.php" class="brand-link">
             <img src="AdminLTE-3.1.0/dist/img/AdminLTELogo.png" alt="AdminLTE Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
             <span class="brand-text font-weight-light">AdminGoWash</span>
         </a>
 
-        <!-- Sidebar -->
         <div class="sidebar">
-            <!-- Sidebar user panel (optional) -->
             <div class="user-panel mt-3 pb-3 mb-3 d-flex">
                 <div class="image">
                     <img src="AdminLTE-3.1.0/dist/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
@@ -254,7 +301,6 @@ $services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name")
                 </div>
             </div>
 
-            <!-- SidebarSearch Form -->
             <div class="form-inline">
                 <div class="input-group" data-widget="sidebar-search">
                     <input class="form-control form-control-sidebar" type="search" placeholder="Search" aria-label="Search">
@@ -266,7 +312,6 @@ $services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name")
                 </div>
             </div>
 
-            <!-- Sidebar Menu -->
             <nav class="mt-2">
                 <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
                     <li class="nav-item">
@@ -275,7 +320,7 @@ $services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name")
                             <p>Dashboard</p>
                         </a>
                     </li>
-                    
+
                     <li class="nav-item">
                         <a href="AdminLTE-3.1.0/tab_booking.php" class="nav-link">
                             <i class="nav-icon fas fa-th"></i>
@@ -284,7 +329,7 @@ $services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name")
                             </p>
                         </a>
                     </li>
-                    
+
                     <li class="nav-item">
                         <a href="admin-harga.php" class="nav-link active">
                             <i class="nav-icon fas fa-chart-pie"></i>
@@ -298,81 +343,66 @@ $services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name")
                             <i class="nav-icon fas fa-sign-out-alt"></i>
                             <p>Logout</p>
                         </a>
-                    </li>     
+                    </li>
                 </ul>
             </nav>
         </div>
     </aside>
 
-    <!-- Content Wrapper -->
     <div class="content-wrapper">
         <div class="container py-3">
             <h1 class="text-center mb-5 ">Kelola Layanan</h1>
-            
-            <!-- Form Tambah/Edit Layanan -->
+
             <div class="card mb-5">
                 <div class="card-header">
                     <h5><?= isset($_GET['edit']) ? 'Edit' : 'Tambah' ?> Layanan</h5>
                 </div>
                 <div class="card-body">
-                   <?php 
-$editService = null;
-if (isset($_GET['edit'])): 
-    $editId = intval($_GET['edit']);
-    $editStmt = $conn->prepare("SELECT * FROM services WHERE id = ?");
-    $editStmt->bind_param("i", $editId);
-    $editStmt->execute();
-    $result = $editStmt->get_result();
-    $editService = $result->fetch_assoc(); // <== ini hasilnya array atau false
-endif;
-
-$editMode = is_array($editService);
+                    <?php
+$editMode = is_array($editlayan);
 ?>
 
 <form method="POST" enctype="multipart/form-data">
     <?php if ($editMode): ?>
-        <input type="hidden" name="id" value="<?= htmlspecialchars($editService['id']) ?>">
-        <!-- Tambahkan hidden input untuk path gambar saat ini -->
-        <input type="hidden" name="current_image_path" value="<?= htmlspecialchars($editService['image']) ?>">
+        <input type="hidden" name="id" value="<?= htmlspecialchars($editlayan['id']) ?>">
+        <input type="hidden" name="current_image_path" value="<?= htmlspecialchars($editlayan['image']) ?>">
     <?php endif; ?>
 
     <div class="mb-3">
-        <label for="name" class="form-label">Nama Layanan</label>
-        <input type="text" class="form-control" id="name" name="name" 
-                value="<?= $editMode ? htmlspecialchars($editService['name']) : '' ?>" required>
+        <label for="nama" class="form-label">Nama Layanan</label>
+        <input type="text" class="form-control" id="nama" name="nama"
+                value="<?= $editMode ? htmlspecialchars($editlayan['nama']) : '' ?>" required>
     </div>
 
-    <!-- Upload Gambar -->
     <div class="mb-3">
         <label for="image" class="form-label">Foto Layanan</label>
         <input type="file" class="form-control" id="image" name="image" accept="image/*" <?= $editMode ? '' : 'required' ?>>
-        <?php if ($editMode && !empty($editService['image'])): ?>
+        <?php if ($editMode && !empty($editlayan['image'])): ?>
             <div class="mt-2">
                 <p class="mb-1">Gambar saat ini:</p>
-                <img src="<?= htmlspecialchars($editService['image']) ?>" alt="Preview" class="service-table-img">
+                <img src="<?= htmlspecialchars($editlayan['image']) ?>" alt="Preview" class="layan-table-img">
             </div>
         <?php endif; ?>
     </div>
 
     <div class="mb-3">
         <label for="description" class="form-label">Deskripsi</label>
-        <textarea class="form-control" id="description" name="description" rows="3" required><?= 
-            $editMode ? htmlspecialchars($editService['description']) : '' ?></textarea>
+        <textarea class="form-control" id="description" name="description" rows="3" required><?=
+            $editMode ? htmlspecialchars($editlayan['description']) : '' ?></textarea>
     </div>
 
     <div class="mb-3">
         <label for="product_used" class="form-label">Produk Digunakan</label>
-        <input type="text" class="form-control" id="product_used" name="product_used" 
-                value="<?= $editMode ? htmlspecialchars($editService['product_used']) : '' ?>" required>
+        <input type="text" class="form-control" id="product_used" name="product_used"
+                value="<?= $editMode ? htmlspecialchars($editlayan['product_used']) : '' ?>" required>
     </div>
 
     <div class="mb-3">
-        <label for="price" class="form-label">Harga</label> <!-- Label diubah dari "Harga (Rp)" menjadi "Harga" -->
-        <input type="number" class="form-control" id="price" name="price" 
-                value="<?= $editMode ? htmlspecialchars($editService['price']) : '' ?>" required>
+        <label for="price" class="form-label">Harga</label> <input type="number" class="form-control" id="price" name="price" step="0.01"
+                value="<?= $editMode ? htmlspecialchars($editlayan['price']) : '' ?>" required>
     </div>
 
-    <button type="submit" name="<?= $editMode ? 'update_service' : 'add_service' ?>" class="btn btn-primary">
+    <button type="submit" name="<?= $editMode ? 'update_layan' : 'add_layan' ?>" class="btn btn-primary-custom">
         <?= $editMode ? 'Update' : 'Tambah' ?> Layanan
     </button>
     <?php if ($editMode): ?>
@@ -381,8 +411,7 @@ $editMode = is_array($editService);
 </form>
                 </div>
             </div>
-            
-            <!-- Daftar Layanan -->
+
             <div class="table-responsive">
                 <table class="table table-striped">
                     <thead>
@@ -397,32 +426,31 @@ $editMode = is_array($editService);
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($services as $service): ?>
+                        <?php foreach ($layanan as $layan): ?>
                         <tr>
-                            <td><?= htmlspecialchars($service['name']) ?></td>
+                            <td><?= htmlspecialchars($layan['nama']) ?></td>
                             <td>
-                                <!-- Menampilkan gambar layanan -->
-                                <img src="<?= htmlspecialchars($service['image']) ?>" alt="Gambar Layanan" class="service-table-img">
+                                <img src="<?= htmlspecialchars($layan['image']) ?>" alt="Gambar Layanan" class="layan-table-img">
                             </td>
-                            <td><?= nl2br(htmlspecialchars($service['description'])) ?></td>
-                            <td><?= htmlspecialchars($service['product_used']) ?></td>
-                            <td>Rp<?= number_format($service['price'], 0, ',', '.') ?></td>
+                            <td><?= nl2br(htmlspecialchars($layan['description'])) ?></td>
+                            <td><?= htmlspecialchars($layan['product_used']) ?></td>
+                            <td>Rp<?= number_format($layan['price'], 0, ',', '.') ?></td>
                             <td>
-                                <span class="badge status-badge bg-<?= $service['is_active'] ? 'success' : 'danger' ?>" 
-                                        data-id="<?= $service['id'] ?>">
-                                    <?= $service['is_active'] ? 'Aktif' : 'Nonaktif' ?>
+                                <span class="badge status-badge <?= $layan['is_active'] ? 'badge-success-custom' : 'badge-danger-custom' ?>"
+                                        data-id="<?= $layan['id'] ?>">
+                                    <?= $layan['is_active'] ? 'Aktif' : 'Nonaktif' ?>
                                 </span>
                             </td>
                             <td>
-                                <a href="admin-harga.php?edit=<?= $service['id'] ?>" class="btn btn-sm btn-warning">
+                                <a href="admin-harga.php?edit=<?= $layan['id'] ?>" class="btn btn-sm btn-warning-custom">
                                     <i class="bi bi-pencil"></i>
                                 </a>
-                                <?php if ($service['is_active']): ?>
-                                    <a href="#" class="btn btn-sm btn-danger" onclick="confirmDelete(<?= $service['id'] ?>)">
+                                <?php if ($layan['is_active']): ?>
+                                    <a href="#" class="btn btn-sm btn-danger-custom" onclick="confirmDelete(<?= $layan['id'] ?>)">
                                         <i class="bi bi-trash"></i>
                                     </a>
                                 <?php else: ?>
-                                    <a href="admin-harga.php?activate=<?= $service['id'] ?>" class="btn btn-sm btn-success">
+                                    <a href="admin-harga.php?activate=<?= $layan['id'] ?>" class="btn btn-sm btn-success-custom">
                                         <i class="bi bi-check-circle"></i>
                                     </a>
                                 <?php endif; ?>
@@ -435,14 +463,13 @@ $editMode = is_array($editService);
         </div>
     </div>
 
-    <!-- REQUIRED SCRIPTS -->
     <script src="AdminLTE-3.1.0/plugins/jquery/jquery.min.js"></script>
     <script src="AdminLTE-3.1.0/plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
     <script src="AdminLTE-3.1.0/plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
     <script src="AdminLTE-3.1.0/dist/js/adminlte.js"></script>
 
     <script>
-        function confirmDelete(serviceId) {
+        function confirmDelete(layanId) {
             Swal.fire({
                 title: 'Hapus Layanan?',
                 text: 'Layanan akan dihapus secara permanen.',
@@ -454,7 +481,7 @@ $editMode = is_array($editService);
                 cancelButtonText: 'Batal'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    window.location.href = `admin-harga.php?delete=${serviceId}`;
+                    window.location.href = `admin-harga.php?delete=${layanId}`;
                 }
             });
         }
@@ -465,8 +492,8 @@ $editMode = is_array($editService);
                 badge.addEventListener('click', function(e) {
                     e.preventDefault();
 
-                    const serviceId = this.getAttribute('data-id');
-                    const isCurrentlyActive = this.classList.contains('bg-success');
+                    const layanId = this.getAttribute('data-id');
+                    const isCurrentlyActive = this.classList.contains('badge-success-custom'); // Sesuaikan dengan kelas kustom Anda
                     const newStatus = isCurrentlyActive ? 0 : 1;
                     const badgeElement = this;
 
@@ -484,7 +511,7 @@ $editMode = is_array($editService);
                         if (result.isConfirmed) {
                             const formData = new FormData();
                             formData.append('update_status', true);
-                            formData.append('id', serviceId);
+                            formData.append('id', layanId);
                             formData.append('status', newStatus);
 
                             fetch(window.location.href, {
@@ -495,8 +522,8 @@ $editMode = is_array($editService);
                             .then(data => {
                                 if(data.success) {
                                     // Update tampilan
-                                    badgeElement.classList.toggle('bg-success');
-                                    badgeElement.classList.toggle('bg-danger');
+                                    badgeElement.classList.toggle('badge-success-custom'); // Sesuaikan kelas kustom
+                                    badgeElement.classList.toggle('badge-danger-custom'); // Sesuaikan kelas kustom
                                     badgeElement.textContent = newStatus ? 'Aktif' : 'Nonaktif';
 
                                     Swal.fire('Berhasil', 'Status berhasil diubah', 'success');

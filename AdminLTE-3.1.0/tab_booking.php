@@ -1,19 +1,13 @@
 <?php
 session_start();
 
-// Database connection details
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db_cucimobil = "cucimobil"; // Assuming your database name is 'cucimobil'
-
-// Establish database connection
-$conn = new mysqli($host, $user, $pass, $db_cucimobil);
-
-// Check connection
-if ($conn->connect_error) {
-    die("Koneksi ke database gagal: " . $conn->connect_error);
-}
+// Include the database connection file
+// PASTIKAN PATH INI BENAR!
+// Jika tab_booking.php ada di 'AdminLTE-3.1.0/' dan conn.php ada di folder 'cucimobil/',
+// maka path '../conn.php' sudah benar.
+// Jika conn.php berada di folder yang SAMA (misal keduanya di 'AdminLTE-3.1.0/'),
+// maka ubah menjadi 'include 'conn.php';'
+include '../conn.php';
 
 // Check if user is logged in and is an admin
 if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
@@ -21,152 +15,276 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
     exit;
 }
 
-// --- Logic for updating booking status and loyalty card ---
+// --- Logic for updating booking status and loyalty card (Adapt to PDO) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'updateStatus') {
     header('Content-Type: application/json');
 
     $id = intval($_POST['id'] ?? 0);
-    $new_status_int = intval($_POST['status'] ?? -1); // 0 for Menunggu, 1 for Selesai
-    
-    // Convert integer status to string for DB consistency if your 'status' column is VARCHAR
+    $new_status_int = intval($_POST['status'] ?? -1);
+
+    // Pastikan status string adalah 'Selesai' atau 'Menunggu'
     $new_status_string = ($new_status_int === 1) ? 'Selesai' : 'Menunggu';
 
     if ($id > 0 && ($new_status_int === 0 || $new_status_int === 1)) {
-        // 1. Get current status and pelanggan_id before updating
-        $stmt_get_current = $conn->prepare("SELECT status, pelanggan_id FROM booking WHERE id = ?");
-        $stmt_get_current->bind_param("i", $id);
-        $stmt_get_current->execute();
-        $result_current = $stmt_get_current->get_result();
-        $current_booking_data = $result_current->fetch_assoc();
-        $stmt_get_current->close();
+        // 1. Get current status, pelanggan_id, and tanggal before updating
+        // Pastikan $pdo sudah terdefinisi di sini
+        if (!isset($pdo) || !$pdo instanceof PDO) {
+            error_log("FATAL ERROR: \$pdo is not defined or not a PDO instance at updateStatus start. Ini menunjukkan masalah pada conn.php.");
+            echo json_encode(['success' => false, 'message' => 'Kesalahan sistem: Koneksi database tidak tersedia. Mohon hubungi administrator.']);
+            exit;
+        }
+
+        $stmt_get_current = $pdo->prepare("SELECT status, pelanggan_id, tanggal FROM booking WHERE id = ?");
+        $stmt_get_current->execute([$id]);
+        $current_booking_data = $stmt_get_current->fetch(PDO::FETCH_ASSOC);
+
+        if (!$current_booking_data) {
+            error_log("DEBUG: Booking dengan ID " . $id . " tidak ditemukan saat update status.");
+            echo json_encode(['success' => false, 'message' => 'Booking tidak ditemukan.']);
+            exit;
+        }
 
         $old_status_string = $current_booking_data['status'];
         $pelanggan_id = $current_booking_data['pelanggan_id'];
+        $booking_tanggal = $current_booking_data['tanggal']; // Ambil tanggal booking
 
-        // Convert old status string to integer for comparison if necessary (assuming 'Selesai' maps to 1, 'Menunggu' to 0)
-        $old_status_int = ($old_status_string === 'Selesai' || $old_status_string === '1') ? 1 : 0;
+        // Convert old status to int for comparison
+        $old_status_int = ($old_status_string === 'Selesai') ? 1 : 0;
 
         // Update booking status in the 'booking' table
-        $stmt = $conn->prepare("UPDATE booking SET status = ? WHERE id = ?");
-        $stmt->bind_param("si", $new_status_string, $id); // Bind new_status_string (e.g., 'Selesai' or 'Menunggu')
+        $pdo->beginTransaction(); // Mulai transaksi
+        try {
+            $stmt = $pdo->prepare("UPDATE booking SET status = ? WHERE id = ?");
+            if ($stmt->execute([$new_status_string, $id])) {
+                error_log("DEBUG: Booking ID " . $id . " berhasil diperbarui status ke " . $new_status_string);
 
-        if ($stmt->execute()) {
-            // Loyalty card update logic based on status change
-            if ($pelanggan_id !== NULL) {
-                // Scenario 1: Status changed from Menunggu to Selesai
-                if ($old_status_int === 0 && $new_status_int === 1) {
-                    $points_per_wash = 10; // Define how many points are earned per wash
-                    $stmt_update_loyalty = $conn->prepare("INSERT INTO loyalty_card (pelanggan_id, total_cuci, poin, terakhir_cuci) VALUES (?, 1, ?, CURDATE())
-                                                            ON DUPLICATE KEY UPDATE total_cuci = total_cuci + 1, poin = poin + ?, terakhir_cuci = CURDATE()");
-                    $stmt_update_loyalty->bind_param("iii", $pelanggan_id, $points_per_wash, $points_per_wash);
-                    $stmt_update_loyalty->execute();
-                    $stmt_update_loyalty->close();
+                // Loyalty card update logic based on status change
+                if ($pelanggan_id !== NULL) {
+                    if ($old_status_int === 0 && $new_status_int === 1) { // Status changed from Menunggu to Selesai
+                        error_log("DEBUG: Status berubah dari Menunggu ke Selesai. Mencoba menambah loyalty card untuk pelanggan_id: " . $pelanggan_id . " pada tanggal: " . $booking_tanggal);
+                        // Insert a new row for each completed wash (representing one stamp)
+                        // Pastikan kolom 'poin' tidak disertakan jika memang sudah dihapus dari tabel
+                        $stmt_insert_loyalty = $pdo->prepare("INSERT INTO loyalty_card (pelanggan_id, terakhir_cuci) VALUES (?, ?)");
+                        if ($stmt_insert_loyalty->execute([$pelanggan_id, $booking_tanggal])) {
+                            error_log("DEBUG: Berhasil menambah entri loyalty card untuk pelanggan ID " . $pelanggan_id . ".");
+                        } else {
+                            $errorInfo = $stmt_insert_loyalty->errorInfo();
+                            error_log("DEBUG: GAGAL menambah entri loyalty card untuk pelanggan ID " . $pelanggan_id . ". Error: " . json_encode($errorInfo));
+                            // Rollback jika penambahan loyalty card gagal
+                            $pdo->rollBack();
+                            echo json_encode(['success' => false, 'message' => 'Gagal memperbarui loyalty card saat menambah: ' . $errorInfo[2]]);
+                            exit;
+                        }
+                    } else if ($old_status_int === 1 && $new_status_int === 0) { // Status changed from Selesai to Menunggu
+                        error_log("DEBUG: Status berubah dari Selesai ke Menunggu. Mencoba menghapus loyalty card untuk pelanggan_id: " . $pelanggan_id . " pada tanggal: " . $booking_tanggal);
+                        // Untuk mengembalikan, hapus satu entri loyalty card yang paling baru DAN sesuai dengan tanggal booking
+                        // Ini penting jika ada multiple booking di hari yang sama
+                        $stmt_delete_loyalty = $pdo->prepare("DELETE FROM loyalty_card WHERE pelanggan_id = ? AND terakhir_cuci = ? ORDER BY id DESC LIMIT 1");
+                        if ($stmt_delete_loyalty->execute([$pelanggan_id, $booking_tanggal])) {
+                            error_log("DEBUG: Berhasil menghapus entri loyalty card untuk pelanggan ID " . $pelanggan_id . ".");
+                        } else {
+                            $errorInfo = $stmt_delete_loyalty->errorInfo();
+                            error_log("DEBUG: GAGAL menghapus entri loyalty card untuk pelanggan ID " . $pelanggan_id . ". Error: " . json_encode($errorInfo));
+                            // Ini tidak harus rollback seluruhnya karena mungkin bookingnya tetap mau dihapus
+                            // Tapi penting untuk tahu ada masalah
+                        }
+                    } else {
+                        error_log("DEBUG: Perubahan status tidak memicu update loyalty card. Status lama: " . $old_status_string . ", Status baru: " . $new_status_string);
+                    }
+                } else {
+                    error_log("DEBUG: pelanggan_id NULL untuk booking ID " . $id . ", tidak memproses loyalty card.");
                 }
-                // Scenario 2: Status changed from Selesai to Menunggu (correction)
-                else if ($old_status_int === 1 && $new_status_int === 0) {
-                    $points_per_wash = 10; // Points to decrement
-                    // Ensure total_cuci and poin don't go below 0
-                    $stmt_update_loyalty = $conn->prepare("UPDATE loyalty_card SET total_cuci = GREATEST(0, total_cuci - 1), poin = GREATEST(0, poin - ?), terakhir_cuci = CURDATE() WHERE pelanggan_id = ?");
-                    $stmt_update_loyalty->bind_param("ii", $points_per_wash, $pelanggan_id);
-                    $stmt_update_loyalty->execute();
-                    $stmt_update_loyalty->close();
-                }
-                // If status didn't change (e.g., Selesai to Selesai or Menunggu to Menunggu), no loyalty update is needed.
+                $pdo->commit(); // Commit transaksi jika semua berhasil
+                echo json_encode(['success' => true]);
+            } else {
+                $errorInfo = $stmt->errorInfo();
+                $pdo->rollBack(); // Rollback jika update booking gagal
+                error_log("DEBUG: Gagal memperbarui status booking ID " . $id . ". Error: " . json_encode($errorInfo));
+                echo json_encode(['success' => false, 'message' => 'Gagal memperbarui status booking: ' . $errorInfo[2]]);
             }
-            echo json_encode(['success' => true]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Gagal memperbarui status booking: ' . $conn->error]);
+        } catch (PDOException $e) {
+            $pdo->rollBack(); // Rollback jika terjadi error
+            error_log("DEBUG: Exception terjadi saat memperbarui loyalty card: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Terjadi kesalahan sistem saat memperbarui loyalty card: ' . $e->getMessage()]);
         }
-        $stmt->close();
     } else {
+        error_log("DEBUG: Data tidak valid untuk updateStatus. ID: " . $id . ", Status: " . $new_status_int);
         echo json_encode(['success' => false, 'message' => 'Data tidak valid']);
     }
-    exit; // Stop script execution after handling AJAX request
+    exit;
 }
 
-// --- Logic for deleting a booking ---
+// --- Logic for deleting a booking (Adapt to PDO) ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'delete') {
     header('Content-Type: application/json');
 
     $id = intval($_POST['id'] ?? 0);
 
     if ($id > 0) {
-        // Optional: If you want to decrement loyalty card when a 'Selesai' booking is deleted
-        // First, get the status and pelanggan_id of the booking being deleted
-        $stmt_get_booking_info = $conn->prepare("SELECT status, pelanggan_id FROM booking WHERE id = ?");
-        $stmt_get_booking_info->bind_param("i", $id);
-        $stmt_get_booking_info->execute();
-        $result_booking_info = $stmt_get_booking_info->get_result();
-        $booking_info = $result_booking_info->fetch_assoc();
-        $stmt_get_booking_info->close();
-
-        if ($booking_info && ($booking_info['status'] == 'Selesai' || $booking_info['status'] == 1) && $booking_info['pelanggan_id'] !== NULL) {
-            $pelanggan_id_to_decrement = $booking_info['pelanggan_id'];
-            $points_per_wash = 10;
-            $stmt_decrement_loyalty = $conn->prepare("UPDATE loyalty_card SET total_cuci = GREATEST(0, total_cuci - 1), poin = GREATEST(0, poin - ?) WHERE pelanggan_id = ?");
-            $stmt_decrement_loyalty->bind_param("ii", $points_per_wash, $pelanggan_id_to_decrement);
-            $stmt_decrement_loyalty->execute();
-            $stmt_decrement_loyalty->close();
+        // Pastikan $pdo sudah terdefinisi di sini
+        if (!isset($pdo) || !$pdo instanceof PDO) {
+            error_log("FATAL ERROR: \$pdo is not defined or not a PDO instance at delete start. Ini menunjukkan masalah pada conn.php.");
+            echo json_encode(['success' => false, 'message' => 'Kesalahan sistem: Koneksi database tidak tersedia. Mohon hubungi administrator.']);
+            exit;
         }
 
-        $stmt = $conn->prepare("DELETE FROM booking WHERE id = ?");
-        $stmt->bind_param("i", $id);
+        // Get booking info to check status and pelanggan_id before deleting
+        $stmt_get_booking_info = $pdo->prepare("SELECT status, pelanggan_id, tanggal FROM booking WHERE id = ?");
+        $stmt_get_booking_info->execute([$id]);
+        $booking_info = $stmt_get_booking_info->fetch(PDO::FETCH_ASSOC);
 
-        if ($stmt->execute()) {
-            echo json_encode(['success' => true]);
-        } else {
-            echo json_encode(['success' => false, 'message' => 'Gagal menghapus data booking.']);
+        if (!$booking_info) {
+            error_log("DEBUG: Booking dengan ID " . $id . " tidak ditemukan saat menghapus.");
+            echo json_encode(['success' => false, 'message' => 'Booking tidak ditemukan.']);
+            exit;
         }
-        $stmt->close();
+
+        $pdo->beginTransaction(); // Mulai transaksi
+        try {
+            // If the booking was 'Selesai', decrement loyalty points by removing one loyalty card entry
+            if ($booking_info['status'] == 'Selesai' && $booking_info['pelanggan_id'] !== NULL) {
+                $pelanggan_id_to_decrement = $booking_info['pelanggan_id'];
+                $booking_tanggal_to_delete = $booking_info['tanggal']; // Ambil tanggal booking yang akan dihapus
+                error_log("DEBUG: Booking ID " . $id . " berstatus Selesai. Mencoba menghapus entri loyalty card untuk pelanggan_id: " . $pelanggan_id_to_decrement . " pada tanggal: " . $booking_tanggal_to_delete);
+                // Remove the most recent loyalty card entry for this pelanggan_id and date
+                $stmt_delete_loyalty = $pdo->prepare("DELETE FROM loyalty_card WHERE pelanggan_id = ? AND terakhir_cuci = ? ORDER BY id DESC LIMIT 1");
+                if ($stmt_delete_loyalty->execute([$pelanggan_id_to_decrement, $booking_tanggal_to_delete])) {
+                    error_log("DEBUG: Berhasil menghapus entri loyalty card saat booking dihapus.");
+                } else {
+                    $errorInfo = $stmt_delete_loyalty->errorInfo();
+                    error_log("DEBUG: GAGAL menghapus entri loyalty card saat booking dihapus. Error: " . json_encode($errorInfo));
+                    // Ini tidak harus rollback seluruhnya karena mungkin bookingnya tetap mau dihapus
+                    // Tapi penting untuk tahu ada masalah
+                }
+            }
+
+            $stmt = $pdo->prepare("DELETE FROM booking WHERE id = ?");
+            if ($stmt->execute([$id])) {
+                $pdo->commit(); // Commit transaksi
+                error_log("DEBUG: Booking ID " . $id . " berhasil dihapus.");
+                echo json_encode(['success' => true]);
+            } else {
+                $errorInfo = $stmt->errorInfo();
+                $pdo->rollBack(); // Rollback jika delete booking gagal
+                error_log("DEBUG: Gagal menghapus booking ID " . $id . ". Error: " . json_encode($errorInfo));
+                echo json_encode(['success' => false, 'message' => 'Gagal menghapus data booking: ' . $errorInfo[2]]);
+            }
+        } catch (PDOException $e) {
+            $pdo->rollBack(); // Rollback jika terjadi error
+            error_log("DEBUG: Exception terjadi saat menghapus booking dan memperbarui loyalty card: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Terjadi kesalahan sistem saat menghapus booking: ' . $e->getMessage()]);
+        }
     } else {
+        error_log("DEBUG: ID booking tidak valid untuk delete. ID: " . $id);
         echo json_encode(['success' => false, 'message' => 'ID booking tidak valid.']);
     }
-    exit; // Stop script execution after handling AJAX request
+    exit;
 }
 
 
-// --- Data fetching for the dashboard ---
-$bookingDetail = [];
-$result2 = $conn->query("SELECT * FROM booking ORDER BY id DESC"); // Order by ID to see most recent first
-if ($result2) {
-    while ($row = $result2->fetch_assoc()) {
-        $bookingDetail[] = $row;
-    }
+// --- Data fetching for the dashboard (Updated for nama_lengkap) ---
+// Pastikan $pdo sudah terdefinisi di sini
+if (!isset($pdo) || !$pdo instanceof PDO) {
+    error_log("FATAL ERROR: \$pdo is not defined or not a PDO instance at data fetching start. Displaying empty data.");
+    $bookingDetail = [];
+    $totalMenunggu = 0;
+    $totalSelesai = 0;
+    $layananTerlaris = '-';
+    $totalLayananTerlaris = 0;
+    $layananKurang = '-';
+    $totalLayananKurang = 0;
 } else {
-    // Handle query error if any
-    error_log("Error fetching booking details: " . $conn->error);
-}
+    $bookingDetail = [];
+    $sql_booking_detail = "
+        SELECT
+            b.id,
+            b.pelanggan_id,
+            u.username, -- Fetch the customer's username from 'users' table
+            l.nama AS nama_layanan, -- Fetch the service name from 'layanan' table
+            b.waktu,
+            b.tanggal,
+            b.status
+        FROM
+            booking b
+        JOIN
+            users u ON b.pelanggan_id = u.id
+        JOIN
+            layanan l ON b.id_layanan = l.id -- Join with 'layanan' table
+        ORDER BY
+            b.tanggal DESC, b.waktu DESC
+    ";
+    try {
+        $stmt_booking_detail = $pdo->query($sql_booking_detail);
+        $bookingDetail = $stmt_booking_detail->fetchAll();
+    } catch (PDOException $e) {
+        error_log("DEBUG: Gagal mengambil detail booking: " . $e->getMessage());
+        $bookingDetail = []; // Set kosong agar tidak error di tampilan
+    }
 
 
-// Calculate total pending bookings
-$bookingQuery = "SELECT COUNT(*) AS total_menunggu FROM booking WHERE status = 'Menunggu' OR status = 0"; // Use 'Menunggu' or 0 based on your current data
-$bookingResult = $conn->query($bookingQuery);
-$bookingData = $bookingResult->fetch_assoc();
-$totalMenunggu = $bookingData['total_menunggu'];
+    // Calculate total pending bookings
+    $bookingQuery = "SELECT COUNT(*) AS total_menunggu FROM booking WHERE status = 'Menunggu' OR status = '0'";
+    try {
+        $bookingResult = $pdo->query($bookingQuery);
+        $totalMenunggu = $bookingResult->fetch(PDO::FETCH_ASSOC)['total_menunggu'];
+    } catch (PDOException $e) {
+        error_log("DEBUG: Gagal menghitung total menunggu: " . $e->getMessage());
+        $totalMenunggu = 0;
+    }
 
-// Calculate total completed bookings
-$selesaiQuery = "SELECT COUNT(*) AS total_selesai FROM booking WHERE status = 'Selesai' OR status = 1"; // Use 'Selesai' or 1
-$selesaiResult = $conn->query($selesaiQuery);
-$selesaiData = $selesaiResult->fetch_assoc();
-$totalSelesai = $selesaiData['total_selesai'];
 
-// Ambil layanan terlaris
-$layananQuery = "SELECT layanan, COUNT(*) AS total_pesanan FROM booking GROUP BY layanan ORDER BY total_pesanan DESC LIMIT 1";
-$layananResult = $conn->query($layananQuery);
-$layananTerlarisData = $layananResult->fetch_assoc();
+    // Calculate total completed bookings
+    $selesaiQuery = "SELECT COUNT(*) AS total_selesai FROM booking WHERE status = 'Selesai' OR status = '1'";
+    try {
+        $selesaiResult = $pdo->query($selesaiQuery);
+        $totalSelesai = $selesaiResult->fetch(PDO::FETCH_ASSOC)['total_selesai'];
+    } catch (PDOException $e) {
+        error_log("DEBUG: Gagal menghitung total selesai: " . $e->getMessage());
+        $totalSelesai = 0;
+    }
 
-$layananTerlaris = $layananTerlarisData ? $layananTerlarisData['layanan'] : '-';
-$totalLayananTerlaris = $layananTerlarisData ? $layananTerlarisData['total_pesanan'] : 0;
 
-// Ambil layanan kurang diminati
-$layananKurangQuery = "SELECT layanan, COUNT(*) AS total_pesanan FROM booking GROUP BY layanan ORDER BY total_pesanan ASC LIMIT 1";
-$layananKurangResult = $conn->query($layananKurangQuery);
-$layananKurangData = $layananKurangResult->fetch_assoc();
+    // Ambil layanan terlaris
+    // Corrected to join with 'layanan' table
+    $layananQuery = "SELECT l.nama AS layanan_nama, COUNT(*) AS total_pesanan
+                        FROM booking b
+                        JOIN layanan l ON b.id_layanan = l.id
+                        GROUP BY l.nama
+                        ORDER BY total_pesanan DESC LIMIT 1";
+    try {
+        $layananResult = $pdo->query($layananQuery);
+        $layananTerlarisData = $layananResult->fetch(PDO::FETCH_ASSOC);
 
-$layananKurang = $layananKurangData ? $layananKurangData['layanan'] : '-';
-$totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] : 0;
+        $layananTerlaris = $layananTerlarisData ? $layananTerlarisData['layanan_nama'] : '-';
+        $totalLayananTerlaris = $layananTerlarisData ? $layananTerlarisData['total_pesanan'] : 0;
+    } catch (PDOException $e) {
+        error_log("DEBUG: Gagal mengambil layanan terlaris: " . $e->getMessage());
+        $layananTerlaris = '-';
+        $totalLayananTerlaris = 0;
+    }
 
-$conn->close(); // Close the database connection after all operations
+
+    // Ambil layanan kurang diminati
+    // Corrected to join with 'layanan' table
+    $layananKurangQuery = "SELECT l.nama AS layanan_nama, COUNT(*) AS total_pesanan
+                            FROM booking b
+                            JOIN layanan l ON b.id_layanan = l.id
+                            GROUP BY l.nama
+                            ORDER BY total_pesanan ASC LIMIT 1";
+    try {
+        $layananKurangResult = $pdo->query($layananKurangQuery);
+        $layananKurangData = $layananKurangResult->fetch(PDO::FETCH_ASSOC);
+
+        $layananKurang = $layananKurangData ? $layananKurangData['layanan_nama'] : '-';
+        $totalLayananKurang = $layananKurangData ? $layananKurangData['total_pesanan'] : 0;
+    } catch (PDOException $e) {
+        error_log("DEBUG: Gagal mengambil layanan kurang diminati: " . $e->getMessage());
+        $layananKurang = '-';
+        $totalLayananKurang = 0;
+    }
+} // End if ($pdo) check
+
+// No need to explicitly close PDO connection, it closes when script ends
 ?>
 
 <!DOCTYPE html>
@@ -329,25 +447,27 @@ $conn->close(); // Close the database connection after all operations
                     </li>
                 </ul>
             </nav>
-        </div>
-    </aside>
-
-    <br>
-    <br>
-    <br>
+            </div>
+        </aside>
 
     <div class="content-wrapper">
+        <div class="content-header">
+            <div class="container-fluid">
+                <div class="row mb-2">
+                    <div class="col-sm-6">
+                        <h1 class="m-0">Tabel Booking</h1>
+                    </div></div></div></div>
         <section class="content">
             <div class="container-fluid">
                 <div class="row">
                     <div class="col-lg-3 col-6">
-                        <div class="small-box bg-warning">
+                        <div class="small-box bg-info">
                             <div class="inner">
                                 <h3><?= $totalMenunggu ?></h3>
-                                <p>Booking Menunggu</p>
+                                <p>Total Booking Menunggu</p>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-stats-bars"></i>
+                                <i class="ion ion-clock"></i>
                             </div>
                             <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                         </div>
@@ -356,23 +476,23 @@ $conn->close(); // Close the database connection after all operations
                         <div class="small-box bg-success">
                             <div class="inner">
                                 <h3><?= $totalSelesai ?></h3>
-                                <p>Booking Selesai</p>
+                                <p>Total Booking Selesai</p>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-person-add"></i>
+                                <i class="ion ion-checkmark"></i>
                             </div>
                             <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                         </div>
                     </div>
                     <div class="col-lg-3 col-6">
-                        <div class="small-box bg-info">
+                        <div class="small-box bg-warning">
                             <div class="inner">
                                 <h6><?= htmlspecialchars($layananTerlaris) ?></h6>
                                 <p>Layanan Terlaris (<?= $totalLayananTerlaris ?> pesanan)</p>
-                            </div><br>
+                            </div>
                             <div class="icon">
                                 <i class="ion ion-star"></i>
-                            </div>
+                            </div><br>
                             <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                         </div>
                     </div>
@@ -383,65 +503,61 @@ $conn->close(); // Close the database connection after all operations
                                 <p>Layanan Kurang Diminati (<?= $totalLayananKurang ?> pesanan)</p>
                             </div>
                             <div class="icon">
-                                <i class="ion ion-minus-circled"></i>
+                                <i class="ion ion-arrow-down-c"></i>
                             </div>
                             <a href="#" class="small-box-footer">More info <i class="fas fa-arrow-circle-right"></i></a>
                         </div>
                     </div>
+                    </div>
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h3 class="card-title">Data Booking Pelanggan</h3>
+                            </div>
+                            <div class="card-body">
+                                <table id="example2" class="table table-bordered table-hover">
+                                    <thead class="table-secondary">
+                                        <tr>
+                                            <th>No.</th> <th>Nama Pelanggan</th>
+                                            <th>Layanan</th>
+                                            <th>Waktu</th>
+                                            <th>Tanggal</th>
+                                            <th>Status</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <?php $i = 1; // Initialize counter for sequential numbering ?>
+                                        <?php foreach ($bookingDetail as $booking): ?>
+                                            <tr>
+                                                <td><?= $i++ ?></td> <td><?= htmlspecialchars($booking['username']) ?></td>
+                                                <td><?= htmlspecialchars($booking['nama_layanan']) ?></td>
+                                                <td><?= htmlspecialchars($booking['waktu']) ?></td>
+                                                <td><?= htmlspecialchars(date('d F Y', strtotime($booking['tanggal']))) ?></td>
+                                                <td>
+                                                    <select class="form-select status-select" data-id="<?= $booking['id'] ?>" onchange="updateStatus(this)">
+                                                        <option value="0" <?= ($booking['status'] == 'Menunggu' || $booking['status'] == '0') ? 'selected' : '' ?> class="status-menunggu">Menunggu</option>
+                                                        <option value="1" <?= ($booking['status'] == 'Selesai' || $booking['status'] == '1') ? 'selected' : '' ?> class="status-selesai">Selesai</option>
+                                                    </select>
+                                                </td>
+                                                <td>
+                                                    <button class="btn btn-danger btn-sm" onclick="deleteBooking(<?= $booking['id'] ?>)">Hapus</button>
+                                                </td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-
-                <div style="max-height: 500px; overflow-y: auto;">
-                    <table class="table table-bordered table-striped">
-                        <thead class="table-secondary" style="position: sticky; top: 0; z-index: 1;">
-                            <tr>
-                                <th>ID</th>
-                                <th>Nama</th>
-                                <th>Layanan</th>
-                                <th>Jam</th>
-                                <th>Tanggal</th>
-                                <th>Status</th>
-                                <th>Aksi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php
-                            $counter = 0;
-                            foreach ($bookingDetail as $row):
-                                $counter++;
-                                if ($counter > 10) break; // Only display the first 10 rows
-                            ?>
-                                <tr id="row-<?= $row['id'] ?>">
-                                    <td><?= htmlspecialchars($row['id']) ?></td>
-                                    <td><?= htmlspecialchars($row['nama']) ?></td>
-                                    <td><?= htmlspecialchars($row['layanan']) ?></td>
-                                    <td><?= date('H:i', strtotime($row['waktu'])) ?></td>
-                                    <td><?= date('d-m-Y', strtotime(explode(' ', $row['tanggal'])[0])) ?></td>
-                                    <td>
-                                        <span class="badge status-toggle bg-<?= ($row['status'] == 'Selesai' || $row['status'] == 1) ? 'success' : 'warning' ?>"
-                                            data-id="<?= htmlspecialchars($row['id']) ?>"
-                                            data-status="<?= ($row['status'] == 'Selesai' || $row['status'] == 1) ? 1 : 0 ?>"
-                                            style="cursor:pointer;">
-                                            <?= ($row['status'] == 'Selesai' || $row['status'] == 1) ? 'Selesai' : 'Menunggu' ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <button class="btn btn-sm btn-danger" onclick="hapusBooking(<?= htmlspecialchars($row['id']) ?>)">Hapus</button>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-
-            </div>
-        </section>
-    </div>
-    <footer class="main-footer">
-        <strong>Copyright &copy; 2014-2021 <a href="https://adminlte.io">AdminLTE.io</a>.</strong>
-        All rights reserved.
-        <div class="float-right d-none d-sm-inline-block">
-            <b>Version</b> 3.1.0
+            </section>
         </div>
+    <footer class="main-footer">
+        <strong>Copyright &copy; 2024 GoWash.</strong>
+        All rights reserved.
     </footer>
 
     <aside class="control-sidebar control-sidebar-dark">
@@ -464,69 +580,66 @@ $conn->close(); // Close the database connection after all operations
 <script src="plugins/summernote/summernote-bs4.min.js"></script>
 <script src="plugins/overlayScrollbars/js/jquery.overlayScrollbars.min.js"></script>
 <script src="dist/js/adminlte.js"></script>
-<script src="dist/js/demo.js"></script>
 <script src="dist/js/pages/dashboard.js"></script>
-
 <script>
-    // Function to handle booking deletion
-    function hapusBooking(id) {
-        if (confirm("Yakin ingin menghapus data booking ini dari database?")) {
-            fetch('tab_booking.php', { // Send request to tab_booking.php itself
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: new URLSearchParams({ action: 'delete', id: id })
+    function updateStatus(selectElement) {
+        const bookingId = selectElement.dataset.id;
+        const newStatus = selectElement.value; // 0 or 1
+
+        fetch('tab_booking.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                action: 'updateStatus',
+                id: bookingId,
+                status: newStatus
             })
-            .then(res => res.json())
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Status booking berhasil diperbarui!');
+                // Opsional: perbarui tampilan baris tabel jika perlu, atau muat ulang halaman
+                window.location.reload();
+            } else {
+                alert('Gagal memperbarui status booking: ' + (data.message || 'Terjadi kesalahan.'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Terjadi kesalahan saat berkomunikasi dengan server.');
+        });
+    }
+
+    function deleteBooking(bookingId) {
+        if (confirm('Apakah Anda yakin ingin menghapus booking ini?')) {
+            fetch('tab_booking.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({
+                    action: 'delete',
+                    id: bookingId
+                })
+            })
+            .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    document.getElementById('row-' + id).remove();
-                    // Reload for simplicity to update counts and dashboard stats
-                    window.location.reload(); 
+                    alert('Booking berhasil dihapus!');
+                    window.location.reload(); // Muat ulang halaman untuk melihat perubahan
                 } else {
-                    alert('Gagal menghapus data booking: ' + (data.message || 'Unknown error.'));
+                    alert('Gagal menghapus booking: ' + (data.message || 'Terjadi kesalahan.'));
                 }
             })
-            .catch(err => {
-                console.error('Error:', err);
-                alert('Terjadi kesalahan saat menghapus.');
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan saat berkomunikasi dengan server.');
             });
         }
     }
-
-    // jQuery for updating status
-    $(document).ready(function () {
-        $(document).on('click', '.status-toggle', function () {
-            const badge = $(this);
-            const id = badge.data('id');
-            const current_status_val = badge.data('status'); // 1 or 0
-            const next_status_val = current_status_val == 1 ? 0 : 1; // Toggle status
-
-            $.ajax({
-                url: 'tab_booking.php', // Send request to tab_booking.php itself
-                type: 'POST',
-                dataType: 'json',
-                data: {
-                    action: 'updateStatus',
-                    id: id,
-                    status: next_status_val
-                },
-                success: function (res) {
-                    if (res.success) {
-                        // The PHP side will handle the loyalty card update/decrement
-                        // We just need to reload the page to reflect all changes (dashboard counts, loyalty card on customer's profile)
-                        window.location.reload(); // Reload for simplicity to update counts and dashboard stats
-                    } else {
-                        alert('Gagal: ' + (res.message || '...'));
-                    }
-                },
-                error: function (xhr, status, err) {
-                    console.error('AJAX Error:', status, err, xhr.responseText);
-                    alert('Terjadi kesalahan koneksi saat memperbarui status.');
-                }
-            });
-        });
-    });
 </script>
-
 </body>
 </html>

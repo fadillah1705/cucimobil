@@ -1,61 +1,87 @@
 <?php
 session_start();
-include 'conn.php';
+include 'conn.php'; // Pastikan file koneksi database sudah benar
 
-// "Jika user belum login ATAU dia login sebagai tamu, maka..."
-
-
+// Redirect jika user belum login atau role adalah 'guest'
 if (!isset($_SESSION['username']) || $_SESSION['role'] === 'guest') {
     header("Location: login.php");
     exit;
 }
-// Kode ini digunakan untuk mengambil data dari sesi dan form POST 
+
 $username = $_SESSION['username'];
 $role = $_SESSION['role'] ?? '';
-$layan = $_POST['layanan'] ?? '';
-$nama = $username; // Default fallback
+$nama_layanan = $_POST['layanan'] ?? ''; // Mengambil nama layanan dari form POST
+$waktu_booking = $_POST['waktu'] ?? date('H:i'); // Ambil waktu dari form, default waktu saat ini
+$tanggal_booking = $_POST['tanggal'] ?? date('Y-m-d'); // Ambil tanggal dari form, default tanggal saat ini
 
-// cek a[akah user bukan amu]
+$pelanggan_id = null;
+$id_layanan = null;
+
+// Ambil ID pelanggan dari tabel users
 if ($role !== 'guest') {
-    // mengambil data nama lengkap dari database berdasarkan username yang diberikan.
-    $stmt = $conn->prepare("SELECT nama_lengkap FROM mencuci WHERE username = ?");
-    $stmt->bind_param("s", $username);
-    $stmt->execute();
-    // mengambil hasil dari query yang sudah dieksekusi dengan prepare + execute, khususnya saat kamu menggunakan SELECT.
-    $result = $stmt->get_result();
-    // mengambil satu baris data dari hasil query
-    // Array asosiatif adalah array yang menggunakan key atau kunci sebagai penanda setiap nilainya, bukan angka berurutan seperti array biasa.
-    $user = $result->fetch_assoc();
+    try {
+        $stmt_user = $pdo->prepare("SELECT id FROM users WHERE username = ?");
+        $stmt_user->execute([$username]);
+        $user_data = $stmt_user->fetch(PDO::FETCH_ASSOC);
 
-
-    //  Cek apakah nama_lengkap dari database kosong atau tidak
-    // Jika tidak kosong → pakai nama_lengkap
-    // Jika kosong → pakai username sebagai gantinya
-    $nama = !empty($user['nama_lengkap']) ? $user['nama_lengkap'] : $username;
+        if ($user_data) {
+            $pelanggan_id = $user_data['id'];
+        } else {
+            // Handle case where user is not found, though theoretically shouldn't happen if session is set
+            echo "<script>alert('User tidak ditemukan di database.'); window.location.href='harga.php';</script>";
+            exit;
+        }
+    } catch (PDOException $e) {
+        error_log("Error fetching user ID: " . $e->getMessage());
+        echo "<script>alert('Terjadi kesalahan saat mengambil data pengguna.'); window.location.href='harga.php';</script>";
+        exit;
+    }
 }
 
-// Validasi data
-//  Kondisi ini akan dijalankan hanya jika ketiga variabel ($nama, $username, dan $layan) tidak kosong.
-if (!empty($nama) && !empty($username) && !empty($layan)) {
-    //  menambahkan data baru ke tabel booking, tepatnya ke kolom nama dan layanan.
-    $stmt = $conn->prepare("INSERT INTO booking (nama, layanan) VALUES (?, ?)");
-    if ($stmt) {
-        $stmt->bind_param("ss", $nama, $layan);
-        if (!$stmt->execute()) {
-            die("Gagal menyimpan aktivitas: " . $stmt->error);
-        }
-        $stmt->close();
-    } else {
-        die("Prepare gagal: " . $conn->error);
-    }
+// Ambil ID layanan dari tabel layanan berdasarkan nama layanan
+if (!empty($nama_layanan)) {
+    try {
+        $stmt_layanan = $pdo->prepare("SELECT id FROM layanan WHERE nama = ?");
+        $stmt_layanan->execute([$nama_layanan]);
+        $layanan_data = $stmt_layanan->fetch(PDO::FETCH_ASSOC);
 
-    // Redirect ke WhatsApp
-    $text = urlencode("Halo, saya ingin booking layanan $layan. Apakah masih tersedia?");
-    header("Location: https://wa.me/6281218352273?text=$text");
-    exit;
+        if ($layanan_data) {
+            $id_layanan = $layanan_data['id'];
+        } else {
+            echo "<script>alert('Layanan tidak valid.'); window.location.href='harga.php';</script>";
+            exit;
+        }
+    } catch (PDOException $e) {
+        error_log("Error fetching service ID: " . $e->getMessage());
+        echo "<script>alert('Terjadi kesalahan saat mengambil data layanan.'); window.location.href='harga.php';</script>";
+        exit;
+    }
+}
+
+// Validasi data sebelum insert
+if ($pelanggan_id !== null && $id_layanan !== null && !empty($waktu_booking) && !empty($tanggal_booking)) {
+    try {
+        // Masukkan data booking ke tabel booking
+        // Kolom status akan otomatis default 'Menunggu'
+        $stmt_booking = $pdo->prepare("INSERT INTO booking (pelanggan_id, id_layanan, waktu, tanggal, status) VALUES (?, ?, ?, ?, 'Menunggu')");
+        
+        if ($stmt_booking->execute([$pelanggan_id, $id_layanan, $waktu_booking, $tanggal_booking])) {
+            // Redirect ke WhatsApp
+            $text = urlencode("Halo, saya ingin booking layanan " . $nama_layanan . " untuk tanggal " . $tanggal_booking . " pukul " . $waktu_booking . ". Apakah masih tersedia?");
+            header("Location: https://wa.me/6281218352273?text=$text");
+            exit;
+        } else {
+            echo "<script>alert('Gagal membuat booking: " . $stmt_booking->errorInfo()[2] . "'); window.location.href='harga.php';</script>";
+            exit;
+        }
+    } catch (PDOException $e) {
+        error_log("Error inserting booking: " . $e->getMessage());
+        echo "<script>alert('Terjadi kesalahan sistem saat menyimpan booking.'); window.location.href='harga.php';</script>";
+        exit;
+    }
 } else {
-    header("Location: harga.php");
+    // Jika ada data yang kurang
+    echo "<script>alert('Data booking tidak lengkap. Mohon lengkapi semua informasi.'); window.location.href='harga.php';</script>";
     exit;
 }
 ?>
-

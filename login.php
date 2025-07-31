@@ -16,8 +16,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
         $password = $_POST["password"];
         $loginType = $_POST["login"] ?? 'user'; // default ke user
 
-        // Mengambil id, username, password, dan role dari tabel 'mencuci'
-        $sql = "SELECT id, username, password, role FROM mencuci WHERE username = ?";
+        // Mengambil id, username, password, dan role dari tabel 'users'
+        $sql = "SELECT id, username, password, role FROM users WHERE username = ?";
         $stmt = $conn->prepare($sql);
         $stmt->bind_param("s", $username);
         $stmt->execute();

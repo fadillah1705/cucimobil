@@ -12,37 +12,74 @@ if (!isset($_SESSION['username']) || $_SESSION['role'] !== 'admin') {
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nama'], $_POST['layanan'], $_POST['tanggal'], $_POST['waktu'])) {
     header('Content-Type: application/json'); // Penting untuk respons AJAX
 
-    $nama = $conn->real_escape_string($_POST['nama']);
-    $layanan = $conn->real_escape_string($_POST['layanan']);
+    $nama_user = $conn->real_escape_string($_POST['nama']); // Nama pengguna dari form
+    $nama_layanan = $conn->real_escape_string($_POST['layanan']); // Nama layanan dari form
     $tanggal = $conn->real_escape_string($_POST['tanggal']);
     $waktu = $conn->real_escape_string($_POST['waktu']);
-    
-    $pelanggan_id = NULL; // Default NULL
 
-    // Opsional: Coba cari pelanggan_id berdasarkan username di tabel mencuci
-    $sql_get_pelanggan_id = "SELECT id FROM mencuci WHERE username = ?";
+    $pelanggan_id = NULL; // Default NULL
+    $id_layanan = NULL; // Default NULL
+
+    // 1. Coba cari pelanggan_id berdasarkan username di tabel users
+    $sql_get_pelanggan_id = "SELECT id FROM users WHERE username = ?";
     $stmt_get_pelanggan_id = $conn->prepare($sql_get_pelanggan_id);
     if ($stmt_get_pelanggan_id) {
-        $stmt_get_pelanggan_id->bind_param("s", $nama); // Asumsi nama di form booking cocok dengan username di mencuci
+        $stmt_get_pelanggan_id->bind_param("s", $nama_user);
         $stmt_get_pelanggan_id->execute();
         $result_pelanggan = $stmt_get_pelanggan_id->get_result();
         if ($result_pelanggan->num_rows > 0) {
             $pelanggan_data = $result_pelanggan->fetch_assoc();
             $pelanggan_id = $pelanggan_data['id'];
+        } else {
+            // Handle case where username is not found in users table
+            echo json_encode(['status' => 'gagal', 'error' => 'Nama pengguna tidak ditemukan.']);
+            $stmt_get_pelanggan_id->close();
+            $conn->close();
+            exit;
         }
         $stmt_get_pelanggan_id->close();
-    }
-
-    $sql_insert = "INSERT INTO booking (pelanggan_id, nama, layanan, tanggal, waktu) VALUES (?, ?, ?, ?, ?)";
-    $stmt = $conn->prepare($sql_insert);
-
-    if ($stmt === false) {
-        echo json_encode(['status' => 'gagal', 'error' => 'Error preparing statement: ' . $conn->error]);
+    } else {
+        echo json_encode(['status' => 'gagal', 'error' => 'Error preparing statement for pelanggan_id: ' . $conn->error]);
+        $conn->close();
         exit;
     }
 
-    // Perhatikan urutan dan tipe data: "issss" -> i untuk int (pelanggan_id), s untuk string lainnya
-    $stmt->bind_param("issss", $pelanggan_id, $nama, $layanan, $tanggal, $waktu); 
+    // 2. Coba cari id_layanan berdasarkan nama layanan di tabel layanan
+    $sql_get_id_layanan = "SELECT id FROM layanan WHERE nama = ?";
+    $stmt_get_id_layanan = $conn->prepare($sql_get_id_layanan);
+    if ($stmt_get_id_layanan) {
+        $stmt_get_id_layanan->bind_param("s", $nama_layanan);
+        $stmt_get_id_layanan->execute();
+        $result_layanan = $stmt_get_id_layanan->get_result();
+        if ($result_layanan->num_rows > 0) {
+            $layanan_data = $result_layanan->fetch_assoc();
+            $id_layanan = $layanan_data['id'];
+        } else {
+            // Handle case where service name is not found in layanan table
+            echo json_encode(['status' => 'gagal', 'error' => 'Layanan tidak ditemukan.']);
+            $stmt_get_id_layanan->close();
+            $conn->close();
+            exit;
+        }
+        $stmt_get_id_layanan->close();
+    } else {
+        echo json_encode(['status' => 'gagal', 'error' => 'Error preparing statement for id_layanan: ' . $conn->error]);
+        $conn->close();
+        exit;
+    }
+
+    // 3. Insert into booking table using the retrieved IDs
+    // Corrected INSERT statement to use pelanggan_id and id_layanan columns
+    $sql_insert = "INSERT INTO booking (pelanggan_id, id_layanan, tanggal, waktu) VALUES (?, ?, ?, ?)";
+    $stmt = $conn->prepare($sql_insert);
+
+    if ($stmt === false) {
+        echo json_encode(['status' => 'gagal', 'error' => 'Error preparing insert statement: ' . $conn->error]);
+        exit;
+    }
+
+    // Perhatikan urutan dan tipe data: "iiss" -> i untuk int (pelanggan_id), i untuk int (id_layanan), s untuk string lainnya
+    $stmt->bind_param("iiss", $pelanggan_id, $id_layanan, $tanggal, $waktu);
 
     if ($stmt->execute()) {
         echo json_encode(['status' => 'sukses', 'message' => 'Booking berhasil disimpan!']);
@@ -113,7 +150,7 @@ $data = $result->fetch_assoc();
 $totalBooking = $data['total_booking'];
 
 // Ambil jumlah total user (role='user')
-$userQuery = "SELECT COUNT(*) AS total_user FROM mencuci WHERE role='user'";
+$userQuery = "SELECT COUNT(*) AS total_user FROM users WHERE role='user'";
 $userResult = $conn->query($userQuery);
 if ($userResult === false) {
     echo "Error dalam query total user: " . $conn->error;
@@ -123,7 +160,8 @@ $userData = $userResult->fetch_assoc();
 $totalUser = $userData['total_user'];
 
 // Ambil jumlah layanan dari tabel layanan
-$layananQuery = "SELECT COUNT(*) AS total_layanan FROM layanan";
+// Perbarui query ini untuk hanya menghitung layanan yang aktif
+$layananQuery = "SELECT COUNT(*) AS total_layanan FROM layanan WHERE is_active = 1";
 $layananResult = $conn->query($layananQuery);
 if ($layananResult === false) {
     echo "Error dalam query layanan: " . $conn->error;
@@ -142,8 +180,8 @@ if ($todayResult === false) {
 $todayData = $todayResult->fetch_assoc();
 $bookingHariIni = $todayData['booking_hari_ini'];
 
-// TABEL KALENDER: Ambil daftar nama user (pelanggan) dari tabel mencuci
-$namaQuery = "SELECT DISTINCT username AS nama FROM mencuci ORDER BY username ASC"; // Menggunakan username sebagai nama
+// TABEL KALENDER: Ambil daftar nama user (pelanggan) dari tabel users
+$namaQuery = "SELECT DISTINCT username AS nama FROM users WHERE role = 'user' ORDER BY username ASC"; // Hanya ambil role 'user' // Menggunakan username sebagai nama
 $namaResult = $conn->query($namaQuery);
 if ($namaResult === false) {
     echo "Error dalam query daftar nama: " . $conn->error;
@@ -154,8 +192,9 @@ while ($row = $namaResult->fetch_assoc()) {
     $daftarNama[] = $row['nama'];
 }
 
-// TABEL KALENDER: Ambil daftar nama layanan dari tabel layanan
-$layananListQuery = "SELECT nama FROM layanan ORDER BY nama ASC"; // Beri nama berbeda agar tidak konflik dengan $layananQuery sebelumnya
+// TABEL KALENDER: Ambil daftar nama layanan dari tabel layanan yang AKTIF
+// Ini adalah bagian kunci yang diubah
+$layananListQuery = "SELECT nama FROM layanan WHERE is_active = 1 ORDER BY nama ASC";
 $layananListResult = $conn->query($layananListQuery);
 if ($layananListResult === false) {
     echo "Error dalam query daftar layanan: " . $conn->error;
@@ -166,9 +205,13 @@ while ($row = $layananListResult->fetch_assoc()) {
     $daftarLayanan[] = $row['nama'];
 }
 
-// Ambil semua event booking untuk kalender
+// Ambil semua event booking untuk kalender (memperbaiki agar mengambil nama layanan dan nama user)
 $events = [];
-$sql_events = "SELECT id, layanan, waktu, tanggal FROM booking";
+// Join dengan tabel users dan layanan untuk mendapatkan nama_user dan nama_layanan
+$sql_events = "SELECT b.id, u.username AS nama_user, l.nama AS nama_layanan, b.waktu, b.tanggal 
+                FROM booking b
+                JOIN users u ON b.pelanggan_id = u.id
+                JOIN layanan l ON b.id_layanan = l.id";
 $result_events = $conn->query($sql_events);
 if ($result_events) {
     while ($row = $result_events->fetch_assoc()) {
@@ -394,10 +437,8 @@ $conn->close(); // Close the database connection after all operations
                             </button>
                         </div>
                         <div class="modal-body">
-                            <!-- Content will be loaded here by JS -->
-                        </div>
+                            </div>
                         <div class="modal-footer">
-                            <!-- The delete button will be dynamically added/removed by JS based on context -->
                             <button type="button" class="btn btn-danger" id="hapusEventBtn">Hapus</button>
                             <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
                         </div>
@@ -520,7 +561,7 @@ $conn->close(); // Close the database connection after all operations
                 <?php
                 foreach ($events as $row) {
                     // Determine class based on service name (case-insensitive)
-                    $serviceLower = strtolower($row['layanan']);
+                    $serviceLower = strtolower($row['nama_layanan']); // Gunakan nama_layanan
                     $class = 'fc-event-default'; // Default class
 
                     if (stripos($serviceLower, 'cuci eksterior') !== false) {
@@ -538,7 +579,8 @@ $conn->close(); // Close the database connection after all operations
                     }
                     
                     $start = $row['tanggal'] . 'T' . date('H:i:s', strtotime($row['waktu']));
-                    echo "{ id: '{$row['id']}', title: '{$row['layanan']}', start: '{$start}', className: '{$class}' },";
+                    // Gabungkan nama user dan layanan di title
+                    echo "{ id: '{$row['id']}', title: '{$row['nama_user']} - {$row['nama_layanan']}', start: '{$start}', classNames: ['{$class}'] },"; // Gunakan classNames (plural)
                 }
                 ?>
             ].filter(event => !getHiddenEventIds().includes(event.id)), // Filter events based on localStorage
@@ -547,7 +589,8 @@ $conn->close(); // Close the database connection after all operations
                 selectedEvent = info.event; // Store the clicked event globally
 
                 $('#bookingModal .modal-body').html(`
-                    <strong>Layanan:</strong> ${info.event.title}<br>
+                    <strong>Nama:</strong> ${selectedEvent.title.split(' - ')[0]}<br>
+                    <strong>Layanan:</strong> ${selectedEvent.title.split(' - ')[1]}<br>
                     <strong>Waktu:</strong> ${info.event.start.toLocaleString()}
                 `);
                 $('#bookingModalLabel').text('Detail Booking'); // Update modal title
