@@ -12,7 +12,7 @@ if (!isset($_SESSION['role']) || $_SESSION['role'] !== 'admin') {
 $editService = null;
 if (isset($_GET['edit'])) {
     $id = intval($_GET['edit']);
-    $stmt = $conn->prepare("SELECT * FROM services WHERE id = ?");
+    $stmt = $conn->prepare("SELECT * FROM layanan WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -61,12 +61,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // Insert ke database
-        $stmt = $conn->prepare("INSERT INTO services (name, image, description, product_used, price) VALUES (?, ?, ?, ?, ?)");
+        $stmt = $conn->prepare("INSERT INTO layanan (name, image, description, product_used, price) VALUES (?, ?, ?, ?, ?)");
         if (!$stmt) {
             echo "<script>Swal.fire('Error!', 'Gagal prepare statement: " . $conn->error . "', 'error');</script>";
             exit;
         }
-
+        
         $stmt->bind_param("ssssd", 
             $_POST['name'],
             $uploadedImagePath,
@@ -115,7 +115,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
-        $stmt = $conn->prepare("UPDATE services SET name = ?, image = ?, description = ?, product_used = ?, price = ? WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE layanan SET name = ?, image = ?, description = ?, product_used = ?, price = ? WHERE id = ?");
         $stmt->bind_param("ssssdi", 
             $_POST['name'], 
             $uploadedImagePath,
@@ -139,7 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $id = $_POST['id'];
         $newStatus = $_POST['status'];
 
-        $stmt = $conn->prepare("UPDATE services SET is_active = ? WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE layanan SET is_active = ? WHERE id = ?");
         $stmt->bind_param("ii", $newStatus, $id);
 
         echo json_encode(['success' => $stmt->execute()]);
@@ -152,6 +152,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // ================================
 if (isset($_GET['delete'])) {
     $id = intval($_GET['delete']);
+
+    $stmt = $conn->prepare("DELETE FROM layanan WHERE id = ?");
+
     
     // Ambil path gambar sebelum menghapus record
     $stmt_get_image = $conn->prepare("SELECT image FROM services WHERE id = ?");
@@ -161,8 +164,7 @@ if (isset($_GET['delete'])) {
     $image_path_to_delete = $result_image->fetch_assoc()['image'] ?? null;
     $stmt_get_image->close();
 
-    $stmt = $conn->prepare("DELETE FROM services WHERE id = ?");
-    $stmt->bind_param("i", $id);
+    
 
     if ($stmt->execute()) {
         // Hapus file gambar dari server
@@ -175,7 +177,7 @@ if (isset($_GET['delete'])) {
         echo "<script>Swal.fire('Gagal!', 'Gagal menghapus layanan: " . $stmt->error . "', 'error');</script>";
     }
 } elseif (isset($_GET['activate'])) {
-    $stmt = $conn->prepare("UPDATE services SET is_active = 1 WHERE id = ?");
+    $stmt = $conn->prepare("UPDATE layanan SET is_active = 1 WHERE id = ?");
     $stmt->bind_param("i", $_GET['activate']);
     $stmt->execute();
     header("Location: admin-harga.php?success=activated");
@@ -183,7 +185,7 @@ if (isset($_GET['delete'])) {
 }
 
 // Ambil semua data layanan
-$services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name");
+$services = $conn->query("SELECT * FROM layanan ORDER BY is_active DESC, nama");
 ?>
 
 
@@ -229,6 +231,105 @@ $services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name")
 <body class="hold-transition sidebar-mini layout-fixed layout-navbar-fixed layout-footer-fixed dark-mode">
 <div class="wrapper">
 
+
+  <!-- Preloader -->
+  <div class="preloader flex-column justify-content-center align-items-center">
+    <img class="animation__wobble" src="AdminLTE-3.1.0/dist/img/AdminLTELogo.png" alt="AdminLTELogo" height="60" width="60">
+  </div>
+
+  <!-- Main Sidebar Container -->
+        <!-- Main Sidebar Container -->
+  <aside class="main-sidebar sidebar-dark-primary elevation-4">
+    <!-- Brand Logo -->
+    <a href="index3.html" class="brand-link">
+      <img src="AdminLTE-3.1.0/dist/img/AdminLTELogo.png" alt="AdminLTE Logo" class="brand-image img-circle elevation-3" style="opacity: .8">
+      <span class="brand-text font-weight-light">AdminGoWash</span>
+    </a>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <!-- Sidebar user panel (optional) -->
+      <div class="user-panel mt-3 pb-3 mb-3 d-flex">
+        <div class="image">
+          <img src="AdminLTE-3.1.0/dist/img/user2-160x160.jpg" class="img-circle elevation-2" alt="User Image">
+        </div>
+         <div class="info">
+  <a href="#" class="d-block"><?= htmlspecialchars($_SESSION['username']) ?></a>
+</div>
+      </div>
+
+      <!-- SidebarSearch Form -->
+      <div class="form-inline">
+        <div class="input-group" data-widget="sidebar-search">
+          <input class="form-control form-control-sidebar" type="search" placeholder="Search" aria-label="Search">
+          <div class="input-group-append">
+            <button class="btn btn-sidebar">
+              <i class="fas fa-search fa-fw"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sidebar Menu -->
+      <nav class="mt-2">
+        <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu" data-accordion="false">
+          <!-- Add icons to the links using the .nav-icon class
+               with font-awesome or any other icon font library -->
+          <li class="nav-item">
+              <li class="nav-item">
+                <a href="admin.php" class="nav-link">
+                  <i class="far fa-circle nav-icon"></i>
+                  <p>Dashboard</p>
+                </a>
+              </li>
+          </li>
+          
+          <li class="nav-item">
+            <a href="AdminLTE-3.1.0/tab_booking.php" class="nav-link">
+              <i class="nav-icon fas fa-th"></i>
+              <p>
+              Booking
+            </p>
+          </a>
+        </li>
+        
+        <li class="nav-item">
+          <a href="admin-harga.php" class="nav-link active">
+            <i class="nav-icon fas fa-chart-pie"></i>
+            <p>
+              Layanan
+            </p>
+          </a>
+        </li>
+        <li class="nav-item">
+                        <a href="kasir.php" class="nav-link">
+                            <i class="nav-icon fas fa-desktop"></i>
+                            <p>
+                                Kasir
+                            </p>
+                        </a>
+                    </li>
+        <li class="nav-item">
+          <a href="logout.php" class="nav-link ">
+            <i class="nav-icon fas fa-sign-out-alt"></i>
+            <p>Logout</p>
+          </a>
+        </li>    
+      </ul>
+    </nav>
+  </div>
+  </aside>
+
+  <!-- Content Wrapper -->
+  <div class="content-wrapper">
+    <div class="container py-3">
+        <h1 class="text-center mb-5 ">Kelola Layanan</h1>
+        
+        <!-- Form Tambah/Edit Layanan -->
+        <div class="card mb-5">
+            <div class="card-header">
+                <h5><?= isset($_GET['edit']) ? 'Edit' : 'Tambah' ?> Layanan</h5>
+
     <!-- Preloader -->
     <div class="preloader flex-column justify-content-center align-items-center">
         <img class="animation__wobble" src="AdminLTE-3.1.0/dist/img/AdminLTELogo.png" alt="AdminLTELogo" height="60" width="60">
@@ -252,6 +353,7 @@ $services = $conn->query("SELECT * FROM services ORDER BY is_active DESC, name")
                 <div class="info">
                     <a href="#" class="d-block"><?= htmlspecialchars($_SESSION['username']) ?></a>
                 </div>
+
             </div>
 
             <!-- SidebarSearch Form -->
@@ -381,6 +483,51 @@ $editMode = is_array($editService);
 </form>
                 </div>
             </div>
+
+        </div>
+        
+        <!-- Daftar Layanan -->
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Nama Layanan</th>
+                        <th>Foto</th>
+                        <th>Deskripsi</th>
+                        <th>Produk</th>
+                        <th>Harga</th>
+                        <th>Status</th>
+                        <th>Aksi</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($services as $service): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($service['nama']) ?></td>
+                        <td>
+  <img src="/ft-cucimobil/<?= htmlspecialchars($service['image']) ?>" alt="Gambar Layanan" width="60" height="60" style="object-fit: cover; border-radius: 8px;">
+</td>
+
+                        <td><?= nl2br(htmlspecialchars($service['description'])) ?></td>
+                        <td><?= htmlspecialchars($service['product_used']) ?></td>
+                        <td>Rp<?= number_format($service['price'], 0, ',', '.') ?></td>
+                        <td>
+                            <span class="badge status-badge bg-<?= $service['is_active'] ? 'success' : 'danger' ?>" 
+                                  data-id="<?= $service['id'] ?>">
+                                <?= $service['is_active'] ? 'Aktif' : 'Nonaktif' ?>
+                            </span>
+                        </td>
+                        <td>
+                            <a href="admin-harga.php?edit=<?= $service['id'] ?>" class="btn btn-sm btn-warning">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <?php if ($service['is_active']): ?>
+                              <a href="#" class="btn btn-sm btn-danger" onclick="confirmDelete(<?= $service['id'] ?>)">
+                                <i class="bi bi-trash"></i>
+                            <?php else: ?>
+                                <a href="admin-harga.php?activate=<?= $service['id'] ?>" class="btn btn-sm btn-success">
+                                    <i class="bi bi-check-circle"></i>
+
             
             <!-- Daftar Layanan -->
             <div class="table-responsive">
@@ -416,6 +563,7 @@ $editMode = is_array($editService);
                             <td>
                                 <a href="admin-harga.php?edit=<?= $service['id'] ?>" class="btn btn-sm btn-warning">
                                     <i class="bi bi-pencil"></i>
+
                                 </a>
                                 <?php if ($service['is_active']): ?>
                                     <a href="#" class="btn btn-sm btn-danger" onclick="confirmDelete(<?= $service['id'] ?>)">

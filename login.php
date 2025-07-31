@@ -10,6 +10,67 @@ $swalScript = ""; // Variabel untuk menampung script SweetAlert2
 // Proses login
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
+
+  // ✅ Login sebagai tamu
+  // if (isset($_POST["login"]) && $_POST["login"] === "guest") {
+  //   $_SESSION["username"] = "Tamu";
+  //   $_SESSION["role"] = "guest";
+  //   $swalScript = "
+  //     <script>
+  //       Swal.fire({
+  //         icon: 'success',
+  //         title: 'Masuk sebagai tamu berhasil!',
+  //         confirmButtonText: 'OK'
+  //       }).then(() => {
+  //         window.location.href = 'index.php';
+  //       });
+  //     </script>";
+  // }
+
+  // ✅ Login sebagai user / admin
+  if (isset($_POST["username"]) && isset($_POST["password"])) {
+    $username = $_POST["username"];
+    $password = $_POST["password"];
+    $loginType = $_POST["login"] ?? 'user'; // default ke user
+
+    $sql = "SELECT * FROM users WHERE username = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows === 1) {
+      $user = $result->fetch_assoc();
+
+      if (password_verify($password, $user["password"])) {
+        $_SESSION["username"] = $user["username"];
+        $_SESSION["role"] = $user["role"];
+
+        if ($loginType === "admin") {
+          if ($user["role"] === "admin") {
+            $swalScript = "
+              <script>
+                Swal.fire({
+                  icon: 'success',
+                  title: 'Login sebagai admin berhasil!',
+                  confirmButtonText: 'OK'
+                }).then(() => {
+                  window.location.href = 'admin.php';
+                });
+              </script>";
+          } else {
+            $swalScript = "
+              <script>
+                Swal.fire({
+                  icon: 'error',
+                  title: 'Akses ditolak! Anda bukan admin.',
+                  confirmButtonText: 'OK'
+                }).then(() => {
+                  window.location.href = 'login.php';
+                });
+              </script>";
+          }
+
     // Login sebagai user / admin
     if (isset($_POST["username"]) && isset($_POST["password"])) {
         $username = $_POST["username"];
@@ -86,6 +147,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         });
                     </script>";
             }
+
         } else {
             // Username tidak ditemukan
             $swalScript = "

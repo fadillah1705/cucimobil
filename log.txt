@@ -1,0 +1,7 @@
+Array
+(
+    [nama] => baim
+    [id_service] => Salon Mobil Kaca
+    [waktu] => 10:20
+    [tanggal] => 2025-07-23
+)
