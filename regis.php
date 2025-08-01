@@ -71,7 +71,7 @@ if (isset($conn)) {
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background-color: #f8f9fa; /* Light background */
+            background-color: #f8f9fa;
             font-family: 'Poppins', sans-serif;
         }
         .card {
