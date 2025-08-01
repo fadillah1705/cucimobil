@@ -4,7 +4,8 @@
 // --- Konfigurasi Database (Ganti sesuai lingkungan Anda) ---
 $servername = "localhost";
 $username_db = "root";
-$password_db = ""; // <--- Ganti dengan password database Anda jika ada
+$password_db = "";
+
 $dbname = "cucimobil";
 
 // --- Koneksi MySQLi (untuk profil.php dan mungkin file lain yang menggunakannya) ---

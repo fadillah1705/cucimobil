@@ -379,7 +379,7 @@ session_start();
         <section id="map-section" class="container map-section py-4">
             <h5 class="fw-bold text-center">Lokasi Kami</h5>
             <div class="d-flex justify-content-center mt-3">
-                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3953.078235477063!2d110.39572977464047!3d-7.781896577239434!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e7a577f88456f9b%3A0x6b4c10c8d1d8a7c2!2sGowok%2C%20Caturtunggal%2C%20Kec.%20Depok%2C%20Kabupaten%20Sleman%2C%20Daerah%20Istimewa%20Yogyakarta!5e0!3m2!1sid!2sid!4v1709723456789!5m2!1sid!2sid"
+                <iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3953.0599929148084!2d110.40883027485759!3d-7.783464277231517!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2e7a59e57fbfe721%3A0x76b8788821eefda3!2sAutowash%20Yogyakarta%20Salon%26Cuci%20Mobil!5e0!3m2!1sid!2sid!4v1754014338186!5m2!1sid!2sid"
                     width="80%" height="350" style="border:0; border-radius: 12px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
             </div>
         </section>

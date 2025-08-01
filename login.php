@@ -1,6 +1,4 @@
 <?php
-// PHP menggunakan session untuk menyimpan data yang tetap tersimpan antar halaman, misalnya data login pengguna.
-// Tanpa session_start();, kamu tidak bisa menggunakan atau menyimpan $_SESSION.
 session_start(); // Pastikan ini adalah baris pertama di file PHP!
 
 include "conn.php"; // Pastikan file koneksi database Anda bernama 'conn.php'
@@ -9,16 +7,36 @@ $swalScript = ""; // Variabel untuk menampung script SweetAlert2
 
 // Proses login
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-
-    // Login sebagai user / admin
-    if (isset($_POST["username"]) && isset($_POST["password"])) {
+    // Logika Login sebagai Tamu (Guest)
+    if (isset($_POST["login"]) && $_POST["login"] === "guest") {
+        $_SESSION["username"] = "Tamu";
+        $_SESSION["role"] = "guest";
+        $swalScript = "
+            <script>
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Masuk sebagai tamu berhasil!',
+                    confirmButtonText: 'OK'
+                }).then(() => {
+                    window.location.href = 'index.php';
+                });
+            </script>";
+    } 
+    // Logika Login sebagai User / Admin
+    else if (isset($_POST["username"]) && isset($_POST["password"])) {
         $username = $_POST["username"];
         $password = $_POST["password"];
-        $loginType = $_POST["login"] ?? 'user'; // default ke user
+        $loginType = $_POST["login"] ?? 'user'; // default ke user jika tidak diset
 
         // Mengambil id, username, password, dan role dari tabel 'users'
         $sql = "SELECT id, username, password, role FROM users WHERE username = ?";
         $stmt = $conn->prepare($sql);
+        
+        // Cek jika prepare statement gagal
+        if ($stmt === false) {
+            die('Prepare failed: ' . htmlspecialchars($conn->error));
+        }
+
         $stmt->bind_param("s", $username);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -86,6 +104,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
                         });
                     </script>";
             }
+
         } else {
             // Username tidak ditemukan
             $swalScript = "
@@ -121,6 +140,8 @@ if (isset($conn)) {
             align-items: center;
             min-height: 100vh;
             background-color: #f8f9fa; /* Light background */
+           
+            font-family: 'Poppins', sans-serif;
         }
         .card {
             border-radius: 15px;
@@ -144,6 +165,9 @@ if (isset($conn)) {
             background-color: #0056b3;
             border-color: #0056b3;
         }
+        .rounded-pill {
+            border-radius: 50rem !important; /* Memastikan tombol dan input benar-benar rounded-pill */
+        }
     </style>
 </head>
 <body class="bg-light">
@@ -153,7 +177,6 @@ if (isset($conn)) {
                 <div class="card shadow p-4">
                     <h3 class="text-center mb-4 fw-bold" style="color: #3a9fa7;">Login Go Wash</h3>
 
-                    <!-- FORM LOGIN -->
                     <form method="POST">
                         <div class="mb-3">
                             <label for="username" class="form-label">Username</label>
@@ -170,14 +193,6 @@ if (isset($conn)) {
                         <a href="index.php" class="btn btn-outline-secondary w-100 rounded-pill">Kembali ke beranda</a>
                     </form>
 
-                    <!-- Pesan Error (akan digantikan oleh SweetAlert2) -->
-                    <?php /* if (!empty($message)): ?>
-                        <div class="alert alert-danger text-center mt-3 rounded-pill">
-                            <?= $message ?>
-                        </div>
-                    <?php endif; */ ?>
-
-                    <!-- Link Daftar -->
                     <div class="text-center mt-4">
                         Belum punya akun? <a href="regis.php" class="text-decoration-none fw-bold" style="color: #3a9fa7;">Daftar di sini</a>
                     </div>
@@ -187,7 +202,6 @@ if (isset($conn)) {
         </div>
     </div>
 
-    <!-- SweetAlert Script -->
     <?= $swalScript ?>
 </body>
 </html>

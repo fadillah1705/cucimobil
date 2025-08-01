@@ -72,6 +72,7 @@ if (isset($conn)) {
             align-items: center;
             min-height: 100vh;
             background-color: #f8f9fa; /* Light background */
+            font-family: 'Poppins', sans-serif;
         }
         .card {
             border-radius: 15px;
